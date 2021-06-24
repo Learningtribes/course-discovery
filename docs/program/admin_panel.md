@@ -33,6 +33,8 @@
         results:[
             uuid:'', // program uuid
             title:'', // program name
+            enrollment_start:'', // enrollment date
+            end:'' // completion date
         ]
     }
 
