@@ -19,14 +19,21 @@ mock_data=true # true 代表启用
 ### Output:
     {
         results:[
-          role: "instructor"  triboo_instructor|instructor｜staff,
-          user:{
-            id:2, 
-            email:'',
-            username:''
-          },
-          role:'', // 
-          team_id:'xxxx' //deprecated
+            role: "instructor"  triboo_instructor|instructor｜staff,
+            user:{
+                id:2, 
+                email:'',
+                username:''
+            },
+            role:'', // 
+            team_id:'xxxx' //deprecated
+          
+            /*
+             logic: when only one row's role field equals 'instructor'in the whole results, the value will be true.
+             value can be true or false;
+             impact "add admin access", "remove admin access" and "remove" buttons 
+            */
+            [hide actions]:false
           
         ]
     }
