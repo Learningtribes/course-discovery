@@ -54,7 +54,9 @@ class ProgramViewSet(viewsets.ModelViewSet):
         if program_uuid:
             filters['uuid'] = program_uuid
 
-        return serializer_class.prefetch_queryset(**filters)
+        return serializer_class.prefetch_queryset(
+            **filters
+        )
 
     def get_serializer_context(self, *args, **kwargs):
         context = super().get_serializer_context(*args, **kwargs)
@@ -63,41 +65,18 @@ class ProgramViewSet(viewsets.ModelViewSet):
         for query_param in query_params:
             context[query_param] = get_query_param(self.request, query_param)
 
+        # Arguments: for Draft program courses list.
+        if 'courses' in self.request.data:
+            # The courses list for this program.
+            # We need fetch & return these courses instead of the related courses of program
+            # Because these courses may belong to Draft Program Courses list.
+            # Format: ['d591f0a5-92d4-47ba-8f21-bf938e559885', 'cf5fe179-8395-4a30-85ed-a4ebfa00b715']
+            context['draft_program_courses_uuids'] = self.request.data['courses']
+
         return context
-
-    @staticmethod
-    def _fix_language_field(input_data):
-        """Displace language field with table `ietf_language_tags_languagetag`
-        """
-        lang_mapping = {
-            'en': 'en-us',
-            'ga': 'gd-ie',
-            'de': 'de-de',
-            'el': 'el',
-            'zh': 'zh-cn',
-            'zh_HANS': 'zh-cn',
-            'zh_HANT': 'zh-cn',
-            'es': 'es-pr',
-            'it': 'it-it',
-            'pt': 'pt-br',
-            'ru': 'ru-mo',
-            'fr': 'fr-fr'
-        }
-
-        if 'language' in input_data:
-            language = lang_mapping.get(
-                input_data['language']
-            )
-            if language:
-                input_data['language'] = language
 
     def create(self, request, *args, **kwargs):
         input_data = OrderedDict(request.data)
-        new_card_image_name = input_data.pop('new_card_image_name', '')
-
-        # Make sure `new_card_image_name` has a value if `image file` provided.
-        if not new_card_image_name and 'card_image_url' in input_data:
-            new_card_image_name = input_data['card_image_url'].name
 
         if r'type' in input_data:
             input_data[r'type'] = ProgramType.objects.get(name=input_data[r'type'])
@@ -109,8 +88,6 @@ class ProgramViewSet(viewsets.ModelViewSet):
         if 'marketing_slug' not in input_data:
             input_data['marketing_slug'] = input_data.get('title').replace(' ', '+')
 
-        self._fix_language_field(input_data)
-
         program_writer = self.get_serializer_class()  # ProgramSerializer
         writer = program_writer(data=input_data)
         if not writer.is_valid():
@@ -119,33 +96,44 @@ class ProgramViewSet(viewsets.ModelViewSet):
                     kwargs, writer.errors
                 )
             )
-        # program_uuid = writer.save().uuid
-        # Rename saved image if new image file name were passed.
-        program_uuid = writer.save_with_image(
-            new_card_image_name,
-            r'card_image_url' in input_data
-        )
+
+        # Save
+        program_uuid = writer.save().uuid
 
         return Response(
-            {'program_uuid': program_uuid}, status=status.HTTP_201_CREATED
+            {'program_uuid': program_uuid},
+            status=status.HTTP_201_CREATED
         )
 
     def update(self, request, *args, **kwargs):
         input_data = OrderedDict(request.data)
-        new_card_image_name = input_data.pop('new_card_image_name', '')
-
-        # Make sure `new_card_image_name` has a value if `image file` provided.
-        if not new_card_image_name and 'card_image_url' in input_data:
-            new_card_image_name = input_data['card_image_url'].name
 
         if r'type' in input_data:
-            input_data[r'type'] = ProgramType.objects.get(name=input_data[r'type'])
+            input_data[r'type'] = ProgramType.objects.get(
+                name=input_data[r'type']
+            )
         if r'partner' in input_data:
-            input_data[r'partner'] = Partner.objects.get(name=input_data[r'partner'])
-
-        self._fix_language_field(input_data)
+            input_data[r'partner'] = Partner.objects.get(
+                name=input_data[r'partner']
+            )
 
         program = self.get_object()
+        if input_data.get('status') == program.status:
+            raise ValidationError('Cannot publish program Twice.')
+
+        # Save Draft program courses list into Mysql.
+        draft_program_courses = input_data.pop('draft_program_courses', None)
+        if draft_program_courses:
+            with transaction.atomic():
+                courses = Course.objects.filter(
+                    uuid__in=[
+                        course['uuid'] for course in draft_program_courses
+                    ]  # UUIDs list of `Draft` Program in MongoDB.
+                )
+                for course in courses:
+                    if course not in program.courses.all():
+                        program.courses.add(course)
+
         writer = self.get_serializer(program, data=input_data, partial=True)
         if not writer.is_valid():
             raise ValidationError(
@@ -154,10 +142,7 @@ class ProgramViewSet(viewsets.ModelViewSet):
                 )
             )
         # Rename saved image if new image file name were passed.
-        writer.save_with_image(
-            new_card_image_name,
-            r'card_image_url' in input_data
-        )
+        writer.save()
 
         return Response(
             {'program_uuid': program.uuid}, status=status.HTTP_200_OK
@@ -241,6 +226,19 @@ class ProgramCoursesViewSet(viewsets.ModelViewSet):
 
         return self.get_serializer_class().prefetch_queryset(**filters)
 
+    def get_serializer_context(self, *args, **kwargs):
+        context = super().get_serializer_context(*args, **kwargs)
+
+        # Arguments: for Draft program courses list.
+        if 'courses' in self.request.data:
+            # The courses list for this program.
+            # We need fetch & return these courses instead of the related courses of program
+            # Because these courses may belong to Draft Program Courses list.
+            # Format: ['d591f0a5-92d4-47ba-8f21-bf938e559885', 'cf5fe179-8395-4a30-85ed-a4ebfa00b715']
+            context['draft_program_courses_uuids'] = self.request.data['courses']
+
+        return context
+
     def list(self, request, program_uuid):
         """Return all courses of a program
             Because we also dont paginate courses list for a Program instance
@@ -261,6 +259,10 @@ class ProgramCoursesViewSet(viewsets.ModelViewSet):
             )
 
     def create(self, request, *args, **kwargs):
+        """Checking course for program courses list. But we don't add any courses into a program courses list.
+            The inserting logic is in publish method.
+        """
+        exec_flag = self.request.data.get('exec')
         course_uuid = self.request.data['course_uuid'] \
             if 'course_uuid' in self.request.data \
             else CourseRun.objects.select_related('course').get(
@@ -273,33 +275,27 @@ class ProgramCoursesViewSet(viewsets.ModelViewSet):
             raise ValidationError(
                 'Course uuid ({}) already exist in the program.'.format(course_uuid)
             )
-        program.courses.add(course)
+        if '1' == exec_flag:
+            program.courses.add(course)
 
-        # Cal. program's start/end date
-        min_start = max_end = None
-        for course_run in program.course_runs:
-            if not min_start:
-                min_start = course_run.start
-            elif course_run.start < min_start:
-                min_start = course_run.start
+        serializer = self.get_serializer(
+            program, many=False, context={'request': self.request}
+        )
 
-            if not max_end:
-                max_end = course_run.end
-            elif course_run.end > max_end:
-                max_end = course_run.end
+        resp_course = serializer.data['courses']
+        if 'courses' not in serializer.data:
+            resp_course = {}
+        else:
+            resp_course = resp_course[0]
 
-        # After adding a new course into Program, make sure to update all the Program Team Member are all in this new Course's Team.
-        # PATCH: localhost:18000/api/team/v0/team_membership? course_id, program_uuid
         return Response(
-            {
-                'course_uuid': course_uuid,
-                'program_start': min_start,
-                'program_end': max_end
-            },
+            resp_course,
             status=status.HTTP_201_CREATED
         )
 
     def destroy(self, request, *args, **kwargs):
+        """Remove a course from Program courses list
+        """
         course_uuid = kwargs['uuid']
         program = self.get_queryset().first()
         course = program.courses.get(uuid=course_uuid)
@@ -311,6 +307,8 @@ class ProgramCoursesViewSet(viewsets.ModelViewSet):
         )
 
     def patch(self, request, *args, **kwargs):
+        """Reorder sequence of course in Program courses list
+        """
         course_uuid = self.request.data['course_uuid']
         target_order = int(request.data['order_no'])    # Zero based index !
         program = self.get_queryset().first()

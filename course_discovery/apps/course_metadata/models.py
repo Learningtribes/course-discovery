@@ -8,6 +8,7 @@ from uuid import uuid4
 import pytz
 import waffle
 from django.core.exceptions import ValidationError
+from django.conf import settings
 from django.db import models, transaction
 from django.db.models.query_utils import Q
 from django.utils.functional import cached_property
@@ -449,6 +450,30 @@ class Course(TimeStampedModel):
             ))
 
         return cls.objects.filter(pk__in=ids)
+
+
+class LanguageField(models.CharField):
+    """Represents a language from the ISO 639-2 language set."""
+
+    def __init__(self, *args, **kwargs):
+        """Creates a LanguageField.
+
+        Accepts all the same kwargs as a CharField, except for max_length and
+        choices. help_text defaults to a description of the ISO 639-2 set.
+        """
+        kwargs.pop('max_length', None)
+        kwargs.pop('choices', None)
+        help_text = kwargs.pop(
+            'help_text',
+            _("The ISO 639-2 language code for this language."),
+        )
+        super(LanguageField, self).__init__(
+            max_length=16,
+            choices=settings.ALL_LANGUAGES,
+            help_text=help_text,
+            *args,
+            **kwargs
+        )
 
 
 class CourseRun(TimeStampedModel):
@@ -985,16 +1010,7 @@ class Program(TimeStampedModel):
         render_variations=custom_render_variations
     )
     banner_image_url = models.URLField(null=True, blank=True, help_text='DEPRECATED: Use the banner image field.')
-    # Store program card image into Local Disk. In the future, we  could migrate it into (LMS)MongoDB.
-    card_image_url = StdImageField(
-        max_length=200,
-        upload_to=UploadToFieldNamePath(populate_from='uuid', path=CARD_IMAGES_STORAGE_FOLDER),
-        blank=True,
-        null=True,
-        variations=CARD_IMAGE_VARIATIONS,
-        render_variations=custom_render_variations,
-        help_text=_('Image used for discovery cards')
-    )
+    card_image_url = models.CharField(null=True, blank=True, max_length=256)
     video = models.ForeignKey(Video, default=None, null=True, blank=True)
     expected_learning_items = SortedManyToManyField(ExpectedLearningItem, blank=True)
     faq = SortedManyToManyField(FAQ, blank=True)
@@ -1028,7 +1044,7 @@ class Program(TimeStampedModel):
         help_text=_(
             "Description specific for this program. It would be displayed on the Program's details page."))
     duration = models.IntegerField(null=False, blank=False, default=0, help_text=_('Time spend of program'))
-    language = models.ForeignKey(LanguageTag, null=True, blank=True)
+    language = LanguageField(default='en', null=True, blank=True, db_index=True)
     creator_id = models.IntegerField(
         null=True, blank=False,
         help_text=_('Program Creator(user) id')
