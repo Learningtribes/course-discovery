@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from datetime import datetime
 from traceback import format_exc
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -117,10 +118,10 @@ class ProgramViewSet(viewsets.ModelViewSet):
             input_data[r'partner'] = Partner.objects.get(
                 name=input_data[r'partner']
             )
+        if r'released_date' in input_data:
+            input_data[r'released_date'] = datetime.now()
 
         program = self.get_object()
-        if input_data.get('status') == program.status:
-            raise ValidationError('Cannot publish program Twice.')
 
         # Save Draft program courses list into Mysql.
         draft_program_courses = input_data.pop('draft_program_courses', None)
@@ -271,12 +272,13 @@ class ProgramCoursesViewSet(viewsets.ModelViewSet):
                 ).course.uuid
 
         program = self.get_queryset().first()
-        course = Course.objects.get(uuid=course_uuid)
-        if course in program.courses.all():
-            raise ValidationError(
-                'Course uuid ({}) already exist in the program.'.format(course_uuid)
-            )
+
         if '1' == exec_flag:
+            course = Course.objects.get(uuid=course_uuid)
+            if course in program.courses.all():
+                raise ValidationError(
+                    'Course uuid ({}) already exist in the program.'.format(course_uuid)
+                )
             program.courses.add(course)
 
         if isinstance(self.request.data, QueryDict):
@@ -292,7 +294,23 @@ class ProgramCoursesViewSet(viewsets.ModelViewSet):
             resp_course = {}
         else:
             resp_course = resp_course[0]
+
+        # Cal. program's start/end date
+        min_start = max_end = None
+        for course_run in program.course_runs:
+            if not min_start and course_run.start:
+                min_start = course_run.start
+            elif course_run.start and course_run.start < min_start:
+                min_start = course_run.start
+
+            if not max_end and course_run.end:
+                max_end = course_run.end
+            elif course_run.end and course_run.end > max_end:
+                max_end = course_run.end
+        # We need it for rendering the range on page
         resp_course['course_uuid'] = course_uuid
+        resp_course['program_start'] = min_start
+        resp_course['program_end'] = max_end
 
         return Response(
             resp_course,
