@@ -64,7 +64,7 @@ class Currency(models.Model):
 class Partner(TimeStampedModel):
     name = models.CharField(max_length=128, unique=True, null=False, blank=False)
     short_code = models.CharField(
-        max_length=8, unique=True, null=False, blank=False, verbose_name=_('Short Code'),
+        max_length=30, unique=True, null=False, blank=False, verbose_name=_('Short Code'),
         help_text=_('Convenient code/slug used to identify this Partner (e.g. for management commands.)'))
     courses_api_url = models.URLField(max_length=255, null=True, blank=True, verbose_name=_('Courses API URL'))
     ecommerce_api_url = models.URLField(max_length=255, null=True, blank=True, verbose_name=_('E-Commerce API URL'))
