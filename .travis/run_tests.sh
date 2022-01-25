@@ -15,6 +15,12 @@ echo '{ "allow_root": true }' > /root/.bowerrc
 make requirements
 make requirements.js
 
+pip uninstall cryptography
+pip install cryptography==3.3.2
+pip uninstall Django
+pip install Django==1.11.29
+pip list
+
 # Ensure documentation can be compiled
 make docs
 
