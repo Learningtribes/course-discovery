@@ -9,7 +9,7 @@ import djchoices.choices
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('course_metadata', '0089_auto_20220111_0906'),
+        ('course_metadata', '0090_auto_20220921_0844'),
     ]
 
     operations = [
