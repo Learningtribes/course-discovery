@@ -66,14 +66,6 @@ msgstr "Bu programdaki derslerin sahip olduğu altyazı dilleri."
 msgid "You are not permitted to access the API documentation."
 msgstr "API belgelerine erişim izniniz bulunmamaktadır."
 
-#: apps/catalogs/models.py
-msgid "Catalog name"
-msgstr "Katalog adı"
-
-#: apps/catalogs/models.py
-msgid "Query to retrieve catalog contents"
-msgstr "Katalog içeriğini almak için sorgula"
-
 #: apps/core/admin.py
 msgid "Personal info"
 msgstr "Kişisel bilgi"

@@ -65,14 +65,6 @@ msgstr ""
 msgid "You are not permitted to access the API documentation."
 msgstr "您無權存取API檔案。"
 
-#: apps/catalogs/models.py
-msgid "Catalog name"
-msgstr "目錄名稱"
-
-#: apps/catalogs/models.py
-msgid "Query to retrieve catalog contents"
-msgstr "以檢索目錄內容查詢"
-
 #: apps/core/admin.py
 msgid "Personal info"
 msgstr "個人資訊"

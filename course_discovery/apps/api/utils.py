@@ -57,9 +57,9 @@ def get_cache_key(**kwargs):
         key1:value1__key2:value2 ...
 
     Example:
-        >>> get_cache_key(site_domain="example.com", resource="catalogs")
+        >>> get_cache_key(site_domain="example.com", resource="programs")
         # Here is key format for above call
-        # "site_domain:example.com__resource:catalogs"
+        # "site_domain:example.com__resource:programs"
         a54349175618ff1659dee0978e3149ca
 
     Arguments:

@@ -19,10 +19,6 @@ msgstr ""
 "Language: eu_ES\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: static/js/catalogs-change-form.js:17
-msgid "Preview"
-msgstr "Aurreikusi"
-
 #: static/js/publisher/change-state.js:15
 msgid "Something went wrong! please try again later."
 msgstr ""

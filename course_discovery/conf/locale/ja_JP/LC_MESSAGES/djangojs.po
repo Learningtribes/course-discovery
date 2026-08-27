@@ -21,10 +21,6 @@ msgstr ""
 "Language: ja_JP\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: static/js/catalogs-change-form.js:17
-msgid "Preview"
-msgstr "プレビュー"
-
 #: static/js/publisher/change-state.js:15
 msgid "Something went wrong! please try again later."
 msgstr "問題が発生しました！後ほど再試行してください。"

@@ -65,14 +65,6 @@ msgstr "本プログラム内のcourse runで利用できる字幕用言語。"
 msgid "You are not permitted to access the API documentation."
 msgstr "API文書へのアクセスが許可されていません。"
 
-#: apps/catalogs/models.py
-msgid "Catalog name"
-msgstr "カタログ名"
-
-#: apps/catalogs/models.py
-msgid "Query to retrieve catalog contents"
-msgstr "カタログのコンテンツを復元するためのクエリ"
-
 #: apps/core/admin.py
 msgid "Personal info"
 msgstr "個人情報"

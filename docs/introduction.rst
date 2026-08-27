@@ -8,12 +8,7 @@ Discovery allows services internal to an Open edX installation to consume a cons
 Courses and Course Runs
 -----------------------
 
-One of Discovery's distinguishing features is the way it formalizes the relationship between courses and course runs. For example, ``course-v1:foo+bar+fall`` and ``course-v1:foo+bar+spring`` identify fall and spring runs of the same course, ``foo+bar``. You can think of courses as collections of course runs. Discovery infers this relationship when collecting data from other services. This hierarchy is the foundation for catalogs and programs, two additional structures provided by Discovery.
-
-Catalogs
---------
-
-Catalogs are dynamic groups of courses. A catalog is defined with an Elasticsearch query. Catalogs are used to give external parties scoped views of edX content. They are also used to implement coupons on the Ecommerce service. For example, a coupon providing a 25% discount on courses from a specific organization would be tied to a catalog identifying those courses.
+One of Discovery's distinguishing features is the way it formalizes the relationship between courses and course runs. For example, ``course-v1:foo+bar+fall`` and ``course-v1:foo+bar+spring`` identify fall and spring runs of the same course, ``foo+bar``. You can think of courses as collections of course runs. Discovery infers this relationship when collecting data from other services. This hierarchy is the foundation for programs, an additional structure provided by Discovery.
 
 Programs
 --------
@@ -33,4 +28,4 @@ Discovery uses Elasticsearch to index data about courses, course runs, and progr
 API
 ---
 
-Access to information about courses, course runs, catalogs, programs, and more is provided by a REST API. For more about the API, use your browser to visit ``/api-docs`` hosted by a running Discovery instance.
+Access to information about courses, course runs, programs, and more is provided by a REST API. For more about the API, use your browser to visit ``/api-docs`` hosted by a running Discovery instance.
