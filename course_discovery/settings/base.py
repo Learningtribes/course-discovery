@@ -62,7 +62,6 @@ PROJECT_APPS = [
     'course_discovery.apps.core',
     'course_discovery.apps.ietf_language_tags',
     'course_discovery.apps.api',
-    'course_discovery.apps.catalogs',
     'course_discovery.apps.course_metadata',
 ]
 
