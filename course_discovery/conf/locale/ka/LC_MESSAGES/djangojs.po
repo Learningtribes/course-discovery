@@ -19,10 +19,6 @@ msgstr ""
 "Language: ka\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: static/js/catalogs-change-form.js:17
-msgid "Preview"
-msgstr "გადახედვა"
-
 #: static/js/publisher/change-state.js:15
 msgid "Something went wrong! please try again later."
 msgstr ""

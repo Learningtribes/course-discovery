@@ -64,14 +64,6 @@ msgstr ""
 msgid "You are not permitted to access the API documentation."
 msgstr ""
 
-#: apps/catalogs/models.py
-msgid "Catalog name"
-msgstr "Katalogoaren izena"
-
-#: apps/catalogs/models.py
-msgid "Query to retrieve catalog contents"
-msgstr ""
-
 #: apps/core/admin.py
 msgid "Personal info"
 msgstr "Norberaren informazioa"

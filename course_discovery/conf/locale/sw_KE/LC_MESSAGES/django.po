@@ -67,14 +67,6 @@ msgstr "Lugha zinazotumika kufundishia kozi za programu hii zina nakala zake."
 msgid "You are not permitted to access the API documentation."
 msgstr "Huna ruhusa ya kupata nyaraka za API."
 
-#: apps/catalogs/models.py
-msgid "Catalog name"
-msgstr "Jina la katalogi"
-
-#: apps/catalogs/models.py
-msgid "Query to retrieve catalog contents"
-msgstr "Maelezo ya kuomba kurejesha taarifa zilizomo kwenye katalogi"
-
 #: apps/core/admin.py
 msgid "Personal info"
 msgstr "Taarifa za mtu binafsi"

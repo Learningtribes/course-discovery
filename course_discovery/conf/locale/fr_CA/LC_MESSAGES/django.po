@@ -122,14 +122,6 @@ msgstr "Langages dans lesquels sont offerts des transcriptions pour les instance
 msgid "You are not permitted to access the API documentation."
 msgstr "Vous n'êtes pas autorisé à accéder à la documentation de l'API."
 
-#: apps/catalogs/models.py
-msgid "Catalog name"
-msgstr "Nom du catalogue"
-
-#: apps/catalogs/models.py
-msgid "Query to retrieve catalog contents"
-msgstr "Requête pour récupérer le contenu du catalogue"
-
 #: apps/core/admin.py
 msgid "Personal info"
 msgstr "Informations personnelles"

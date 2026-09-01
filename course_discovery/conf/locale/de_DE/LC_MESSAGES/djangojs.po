@@ -23,10 +23,6 @@ msgstr ""
 "Language: de_DE\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: static/js/catalogs-change-form.js:17
-msgid "Preview"
-msgstr "Vorschau"
-
 #: static/js/publisher/change-state.js:15
 msgid "Something went wrong! please try again later."
 msgstr "Etwas ist schief gelaufen! Bitte später nochmal versuchen."

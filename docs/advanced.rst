@@ -43,23 +43,6 @@ edX manages two "extension" apps located at ``course_discovery/apps/edx_catalog_
 
 ``edx_catalog_extensions`` is disabled by default. edX developers should add ``course_discovery.apps.edx_catalog_extensions`` to ``INSTALLED_APPS`` in a ``private.py`` settings file.
 
-Catalogs
---------
-
-Catalogs are dynamic groups of courses modeled as access-controlled Elasticsearch queries. You can find the ``Catalog`` model in ``course_discovery/apps/catalogs/models.py``.
-
-Permissions
-+++++++++++
-
-A catalog's ``viewers`` property returns the users who are allowed to view the catalog and the courses within it. These per-object permissions are implemented using `django-guardian`_.
-
-.. _django-guardian: https://github.com/django-guardian/django-guardian
-
-Administration
-++++++++++++++
-
-You can administer catalogs through the LMS at ``/api-admin/catalogs``. You can also modify catalogs using Discovery's Django admin at ``/admin/catalogs/``. The admin interface provides a preview button you can use to view the list of courses contained in a catalog, as well as the standard ``django-guardian`` admin interface for managing user permissions.
-
 Waffle
 ------
 

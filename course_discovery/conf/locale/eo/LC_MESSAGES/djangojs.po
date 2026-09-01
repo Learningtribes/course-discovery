@@ -18,10 +18,6 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: static/js/catalogs-change-form.js
-msgid "Preview"
-msgstr "Prévïéw Ⱡ'σяєм ιρѕυм #"
-
 #: static/js/publisher/change-state.js
 msgid "Something went wrong! please try again later."
 msgstr ""

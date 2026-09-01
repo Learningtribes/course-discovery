@@ -66,14 +66,6 @@ msgstr "ენები რომლებიც კურსის გაშვ
 msgid "You are not permitted to access the API documentation."
 msgstr "თქვენ არ გაქვთ დაშვება API-ს დოკუმენტებზე წვდომასთან."
 
-#: apps/catalogs/models.py
-msgid "Catalog name"
-msgstr "კატალოგის სახელი"
-
-#: apps/catalogs/models.py
-msgid "Query to retrieve catalog contents"
-msgstr "კატალოგის შინაარსის მოსაძიებელი მოთხოვნა"
-
 #: apps/core/admin.py
 msgid "Personal info"
 msgstr "პირადი ინფორმაცია"

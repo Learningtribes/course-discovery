@@ -82,15 +82,6 @@ msgstr ""
 "Ýöü äré nöt pérmïttéd tö äççéss thé ÀPÌ döçüméntätïön. Ⱡ'σяєм ιρѕυм ∂σłσя "
 "ѕιт αмєт, ¢σηѕє¢тєтυя α#"
 
-#: apps/catalogs/models.py
-msgid "Catalog name"
-msgstr "Çätälög nämé Ⱡ'σяєм ιρѕυм ∂σłσя ѕ#"
-
-#: apps/catalogs/models.py
-msgid "Query to retrieve catalog contents"
-msgstr ""
-"Qüérý tö rétrïévé çätälög çönténts Ⱡ'σяєм ιρѕυм ∂σłσя ѕιт αмєт, ¢σηѕє¢тєт#"
-
 #: apps/core/admin.py
 msgid "Personal info"
 msgstr "Pérsönäl ïnfö Ⱡ'σяєм ιρѕυм ∂σłσя ѕι#"
