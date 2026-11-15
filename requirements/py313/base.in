@@ -1,0 +1,48 @@
+# course-discovery Python 3.13 runtime dependencies (phase 2, S2.1)
+# Versions from docs/py313/course-discovery-py313-upgrade-2026-11-13.md §2.1/§2.2.
+# Removed vs base.txt: boto, django-choices, django-haystack, django-storages,
+# djangorestframework-jwt, drf-haystack, elasticsearch.
+
+beautifulsoup4==4.14.3
+cryptography==47.0.0
+django==5.2.13
+django-autocomplete-light==5.0.0
+django-compressor==4.7.0
+django-contrib-comments==2.2.0
+django-extensions==4.1
+django-filter==25.2
+django-fsm==5.0.1
+django-guardian==3.5.2
+django-libsass==0.9
+django-parler==2.4
+django-simple-history==3.11.0
+django-solo==2.7.0
+django-sortedm2m==4.1.0
+django-stdimage==6.0.2
+django-taggit==7.0.0
+django-taggit-autosuggest==0.4.2
+django-taggit-serializer==0.1.7
+django-waffle==5.0.0
+django-webpack-loader==3.2.3
+djangorestframework==3.17.1
+djangorestframework-csv==3.0.2
+djangorestframework-xml==2.0.0
+drf-nested-routers==0.95.3
+django-rest-swagger==2.2.0
+drf-extensions==0.8.0
+dry-rest-permissions==0.1.10
+edx-auth-backends==5.1.1
+edx-ccx-keys==2.0.2
+edx-django-release-util==1.5.0
+edx-django-sites-extensions==6.0.0
+edx-drf-extensions @ file:///workspace/ci/py313/companions/artifacts/edx_drf_extensions-10.6.0+hawthorn.1.tar.gz
+edx-opaque-keys==4.0.0
+edx-rest-api-client==7.0.0
+html2text==2025.4.15
+jsonfield==3.2.0
+markdown==3.10.2
+pillow==12.2.0
+pycountry==26.2.16
+python-dateutil==2.9.0.post0
+pytz==2026.1.post1
+requests==2.33.1

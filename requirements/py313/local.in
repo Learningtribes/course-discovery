@@ -1,0 +1,8 @@
+# course-discovery Python 3.13 local-dev dependencies (phase 2, S2.1)
+-r test.in
+
+django-debug-toolbar>=4.0
+edx-i18n-tools==2.0.0
+edx-sphinx-theme==1.0.2
+Sphinx>=8.0
+transifex-client
