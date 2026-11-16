@@ -19,7 +19,7 @@ class RelatedModel(models.Model):
 
 
 class ForeignRelatedModel(models.Model):
-    fk = models.ForeignKey(RelatedModel)
+    fk = models.ForeignKey(RelatedModel, on_delete=models.CASCADE)
 
     class Meta:
         app_label = 'core'

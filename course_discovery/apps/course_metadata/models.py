@@ -10,14 +10,15 @@ import pytz
 from django.core.exceptions import ValidationError
 from django.conf import settings
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django_extensions.db.fields import AutoSlugField
 from django_extensions.db.models import TimeStampedModel
 from parler.models import TranslatableModel, TranslatedFieldsModel
 from solo.models import SingletonModel
 from sortedm2m.fields import SortedManyToManyField
 from stdimage.models import StdImageField
-from stdimage.utils import UploadToAutoSlug
+
+from course_discovery.apps.course_metadata.utils import UploadToAutoSlug
 from taggit_autosuggest.managers import TaggableManager
 
 from course_discovery.apps.core.models import Currency, Partner
@@ -98,7 +99,7 @@ class Image(AbstractMediaModel):
 
 class Video(AbstractMediaModel):
     """ Video model. """
-    image = models.ForeignKey(Image, null=True, blank=True)
+    image = models.ForeignKey(Image, null=True, blank=True, on_delete=models.CASCADE)
 
     def __str__(self):
         return '{src}: {description}'.format(src=self.src, description=self.description)
@@ -117,7 +118,7 @@ class Subject(TranslatableModel, TimeStampedModel):
     slug = AutoSlugField(populate_from='name', editable=True, blank=True,
                          help_text=_('Leave this field blank to have the value generated automatically.'))
 
-    partner = models.ForeignKey(Partner)
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.name
@@ -137,7 +138,7 @@ class Subject(TranslatableModel, TimeStampedModel):
 
 
 class SubjectTranslation(TranslatedFieldsModel):
-    master = models.ForeignKey(Subject, related_name='translations', null=True)
+    master = models.ForeignKey(Subject, related_name='translations', null=True, on_delete=models.CASCADE)
 
     name = models.CharField(max_length=255, blank=False, null=False)
     subtitle = models.CharField(max_length=255, blank=True, null=True)
@@ -155,7 +156,7 @@ class Topic(TranslatableModel, TimeStampedModel):
     slug = AutoSlugField(populate_from='name', editable=True, blank=True,
                          help_text=_('Leave this field blank to have the value generated automatically.'))
 
-    partner = models.ForeignKey(Partner)
+    partner = models.ForeignKey(Partner, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.name
@@ -175,7 +176,7 @@ class Topic(TranslatableModel, TimeStampedModel):
 
 
 class TopicTranslation(TranslatedFieldsModel):
-    master = models.ForeignKey(Topic, related_name='translations', null=True)
+    master = models.ForeignKey(Topic, related_name='translations', null=True, on_delete=models.CASCADE)
 
     name = models.CharField(max_length=255, blank=False, null=False)
     subtitle = models.CharField(max_length=255, blank=True, null=True)
@@ -204,12 +205,12 @@ class JobOutlookItem(AbstractValueModel):
 
 class SyllabusItem(AbstractValueModel):
     """ SyllabusItem model. """
-    parent = models.ForeignKey('self', blank=True, null=True, related_name='children')
+    parent = models.ForeignKey('self', blank=True, null=True, related_name='children', on_delete=models.CASCADE)
 
 
 class Organization(TimeStampedModel):
     """ Organization model. """
-    partner = models.ForeignKey(Partner, null=True, blank=False)
+    partner = models.ForeignKey(Partner, null=True, blank=False, on_delete=models.CASCADE)
     uuid = models.UUIDField(blank=False, null=False, default=uuid4, editable=False, verbose_name=_('UUID'))
     key = models.CharField(max_length=255, help_text=_('Please do not use any spaces or special characters other '
                                                        'than period, underscore or hyphen. This key will be used '
@@ -254,7 +255,7 @@ class Organization(TimeStampedModel):
 class Person(TimeStampedModel):
     """ Person model. """
     uuid = models.UUIDField(blank=False, null=False, default=uuid4, editable=False, verbose_name=_('UUID'))
-    partner = models.ForeignKey(Partner, null=True, blank=False)
+    partner = models.ForeignKey(Partner, null=True, blank=False, on_delete=models.CASCADE)
     salutation = models.CharField(max_length=10, null=True, blank=True)
     given_name = models.CharField(max_length=255)
     family_name = models.CharField(max_length=255, null=True, blank=True)
@@ -310,9 +311,9 @@ class Position(TimeStampedModel):
 
     This model represent's a `Person`'s role at an organization.
     """
-    person = models.OneToOneField(Person)
+    person = models.OneToOneField(Person, on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
-    organization = models.ForeignKey(Organization, null=True, blank=True)
+    organization = models.ForeignKey(Organization, null=True, blank=True, on_delete=models.CASCADE)
     organization_override = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
@@ -336,8 +337,7 @@ class Course(TimeStampedModel):
     )
     uuid = models.UUIDField(default=uuid4, editable=False, verbose_name=_('UUID'))
     canonical_course_run = models.OneToOneField(
-        'course_metadata.CourseRun', related_name='canonical_for_course', default=None, null=True, blank=True
-    )
+        'course_metadata.CourseRun', related_name='canonical_for_course', default=None, null=True, blank=True, on_delete=models.CASCADE)
     key = models.CharField(max_length=255)
     title = models.CharField(max_length=255, default=None, null=True, blank=True)
     card_image_url = models.URLField(max_length=1024, null=True, blank=True)
@@ -401,11 +401,11 @@ class CommaSeparatedLanguagesField(models.CharField):
 class CourseRun(TimeStampedModel):
     """ CourseRun model. """
     uuid = models.UUIDField(default=uuid4, editable=False, verbose_name=_('UUID'))
-    course = models.ForeignKey(Course, related_name='course_runs')
+    course = models.ForeignKey(Course, related_name='course_runs', on_delete=models.CASCADE)
     key = models.CharField(max_length=255, unique=True)
     status = models.CharField(
         default=CourseRunStatus.Unpublished, max_length=255, null=False, blank=False,
-        db_index=True, choices=CourseRunStatus.choices, validators=[CourseRunStatus.validator]
+        db_index=True, choices=CourseRunStatus.choices
     )
     title_override = models.CharField(
         max_length=255, default=None, null=True, blank=True,
@@ -484,11 +484,11 @@ class Seat(TimeStampedModel):
         'null': False,
         'default': 0.00,
     }
-    course_run = models.ForeignKey(CourseRun, related_name='seats')
+    course_run = models.ForeignKey(CourseRun, related_name='seats', on_delete=models.CASCADE)
     # TODO Replace with FK to SeatType model
     type = models.CharField(max_length=63, choices=SEAT_TYPE_CHOICES)
     price = models.DecimalField(**PRICE_FIELD_CONFIG)
-    currency = models.ForeignKey(Currency)
+    currency = models.ForeignKey(Currency, on_delete=models.CASCADE)
     upgrade_deadline = models.DateTimeField(null=True, blank=True)
     credit_provider = models.CharField(max_length=255, null=True, blank=True)
     credit_hours = models.IntegerField(null=True, blank=True)
@@ -503,7 +503,7 @@ class Seat(TimeStampedModel):
 
 
 class Endorsement(TimeStampedModel):
-    endorser = models.ForeignKey(Person, blank=False, null=False)
+    endorser = models.ForeignKey(Person, blank=False, null=False, on_delete=models.CASCADE)
     quote = models.TextField(blank=False, null=False)
 
     def __str__(self):
@@ -513,7 +513,7 @@ class Endorsement(TimeStampedModel):
 class CorporateEndorsement(TimeStampedModel):
     corporation_name = models.CharField(max_length=128, blank=False, null=False)
     statement = models.TextField(null=True, blank=True)
-    image = models.ForeignKey(Image, blank=True, null=True)
+    image = models.ForeignKey(Image, blank=True, null=True, on_delete=models.CASCADE)
     individual_endorsements = SortedManyToManyField(Endorsement)
 
     def __str__(self):
@@ -573,7 +573,7 @@ class Program(TimeStampedModel):
         help_text=_('The user-facing display title for this Program.'), max_length=255, unique=True)
     status = models.CharField(
         help_text=_('The lifecycle status of this Program.'), max_length=24, null=False, blank=False, db_index=True,
-        choices=ProgramStatus.choices, validators=[ProgramStatus.validator]
+        choices=ProgramStatus.choices
     )
     courses = SortedManyToManyField(Course, related_name='programs')
     org = models.CharField(
@@ -590,7 +590,7 @@ class Program(TimeStampedModel):
     duration = models.IntegerField(null=False, blank=False, default=0, help_text=_('Time spend of program'))
     visibility = models.IntegerField(
         null=False, blank=False, default=0,
-        choices=ProgramVisibility.choices, validators=[ProgramVisibility.validator],
+        choices=ProgramVisibility.choices,
         help_text=_('Visibility of program')
     )
     languages = CommaSeparatedLanguagesField(max_length=128, null=True, blank=True)
@@ -692,7 +692,7 @@ class Program(TimeStampedModel):
 
 class PersonSocialNetwork(AbstractSocialNetworkModel):
     """ Person Social Network model. """
-    person = models.ForeignKey(Person, related_name='person_networks')
+    person = models.ForeignKey(Person, related_name='person_networks', on_delete=models.CASCADE)
 
     class Meta(object):
         verbose_name_plural = 'Person SocialNetwork'
@@ -705,7 +705,7 @@ class PersonSocialNetwork(AbstractSocialNetworkModel):
 
 class CourseRunSocialNetwork(AbstractSocialNetworkModel):
     """ CourseRun Social Network model. """
-    course_run = models.ForeignKey(CourseRun, related_name='course_run_networks')
+    course_run = models.ForeignKey(CourseRun, related_name='course_run_networks', on_delete=models.CASCADE)
 
     class Meta(object):
         verbose_name_plural = 'CourseRun SocialNetwork'
@@ -718,7 +718,7 @@ class CourseRunSocialNetwork(AbstractSocialNetworkModel):
 
 class PersonWork(AbstractValueModel):
     """ Person Works model. """
-    person = models.ForeignKey(Person, related_name='person_works')
+    person = models.ForeignKey(Person, related_name='person_works', on_delete=models.CASCADE)
 
 
 class DataLoaderConfig(SingletonModel):

@@ -6,9 +6,9 @@ import html2text
 import markdown
 from dateutil.parser import parse
 from django.utils.functional import cached_property
-from edx_rest_api_client.client import EdxRestApiClient
 from opaque_keys.edx.keys import CourseKey
 
+from course_discovery.apps.core.api_client.utils import create_api_client
 from course_discovery.apps.core.utils import delete_orphans
 from course_discovery.apps.course_metadata.models import Image, Video
 
@@ -66,7 +66,7 @@ class AbstractDataLoader(metaclass=abc.ABCMeta):
         else:
             kwargs['oauth_access_token'] = self.access_token
 
-        return EdxRestApiClient(self.api_url, **kwargs)
+        return create_api_client(self.api_url, **kwargs)
 
     @abc.abstractmethod
     def ingest(self):  # pragma: no cover

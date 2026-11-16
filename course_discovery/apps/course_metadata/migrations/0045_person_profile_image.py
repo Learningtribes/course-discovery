@@ -3,7 +3,7 @@
 from __future__ import unicode_literals
 
 import stdimage.models
-import stdimage.utils
+import course_discovery.apps.course_metadata.utils
 from django.db import migrations
 
 
@@ -17,6 +17,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='person',
             name='profile_image',
-            field=stdimage.models.StdImageField(blank=True, null=True, upload_to=stdimage.utils.UploadToAutoSlug('uuid', path='media/people/profile_images')),
+            field=stdimage.models.StdImageField(blank=True, null=True, upload_to=course_discovery.apps.course_metadata.utils.UploadToAutoSlug('uuid', path='media/people/profile_images')),
         ),
     ]

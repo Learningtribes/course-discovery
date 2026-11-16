@@ -5,7 +5,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views.generic import View
 
-from edx_rest_api_client.client import EdxRestApiClient
+from edx_rest_api_client.client import get_oauth_access_token
 
 from course_discovery.apps.course_metadata.data_loaders.api import CoursesApiDataLoader
 
@@ -40,7 +40,7 @@ class CourseMetadataRefresher(View):
                 end_point=courses_api_cfg['OIDC_URL_ROOT']
             ).strip('/')
 
-            access_token, __ = EdxRestApiClient.get_oauth_access_token(
+            access_token, __ = get_oauth_access_token(
                 '{root}/access_token'.format(root=oidc_url_root),
                 courses_api_cfg['OIDC_KEY'],
                 courses_api_cfg['OIDC_SECRET'],

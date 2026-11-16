@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='course',
             name='canonical_course_run',
-            field=models.OneToOneField(null=True, default=None, blank=True, to='course_metadata.CourseRun', related_name='canonical_for_course'),
+            field=models.OneToOneField(null=True, default=None, blank=True, to='course_metadata.CourseRun', related_name='canonical_for_course', on_delete=models.CASCADE),
         ),
     ]

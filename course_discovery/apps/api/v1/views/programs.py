@@ -8,7 +8,7 @@ from django.db.models import When
 from django.db import connection
 from django.db import transaction
 from django.http.request import QueryDict
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -33,7 +33,7 @@ class ProgramViewSet(viewsets.ModelViewSet):
     lookup_value_regex = '[0-9a-f-]+'
     permission_classes = (IsAuthenticated,)
     filter_backends = (DjangoFilterBackend,)
-    filter_class = filters.ProgramFilter
+    filterset_class = filters.ProgramFilter
 
     # Explicitly support PageNumberPagination and LimitOffsetPagination. Future
     # versions of this API should only support the system default, PageNumberPagination.

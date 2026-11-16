@@ -1,36 +1,36 @@
-from django.utils.translation import ugettext_lazy as _
-from djchoices import ChoiceItem, DjangoChoices
+from django.db.models import IntegerChoices, TextChoices
+from django.utils.translation import gettext_lazy as _
 
 
-class CourseRunStatus(DjangoChoices):
-    Published = ChoiceItem('published', _('Published'))
-    Unpublished = ChoiceItem('unpublished', _('Unpublished'))
+class CourseRunStatus(TextChoices):
+    Published = 'published', _('Published')
+    Unpublished = 'unpublished', _('Unpublished')
 
 
-class CourseRunPacing(DjangoChoices):
+class CourseRunPacing(TextChoices):
     # Translators: Instructor-paced refers to course runs that operate on a schedule set by the instructor,
     # similar to a normal university course.
-    Instructor = ChoiceItem('instructor_paced', _('Instructor-paced'))
+    Instructor = 'instructor_paced', _('Instructor-paced')
     # Translators: Self-paced refers to course runs that operate on the student's schedule.
-    Self = ChoiceItem('self_paced', _('Self-paced'))
+    Self = 'self_paced', _('Self-paced')
 
 
-class ProgramStatus(DjangoChoices):
-    Unpublished = ChoiceItem('unpublished', _('Unpublished'))
-    Active = ChoiceItem('active', _('Active'))
-    Retired = ChoiceItem('retired', _('Retired'))
-    Deleted = ChoiceItem('deleted', _('Deleted'))
+class ProgramStatus(TextChoices):
+    Unpublished = 'unpublished', _('Unpublished')
+    Active = 'active', _('Active')
+    Retired = 'retired', _('Retired')
+    Deleted = 'deleted', _('Deleted')
 
 
-class ProgramVisibility(DjangoChoices):
-    Public = ChoiceItem(0, _('Full public'))
-    Accessible = ChoiceItem(1, _('Accessible by URL'))
-    Private = ChoiceItem(2, _('Private'))
+class ProgramVisibility(IntegerChoices):
+    Public = 0, _('Full public')
+    Accessible = 1, _('Accessible by URL')
+    Private = 2, _('Private')
 
 
-class ReportingType(DjangoChoices):
-    mooc = ChoiceItem('mooc', 'mooc')
-    spoc = ChoiceItem('spoc', 'spoc')
-    test = ChoiceItem('test', 'test')
-    demo = ChoiceItem('demo', 'demo')
-    other = ChoiceItem('other', 'other')
+class ReportingType(TextChoices):
+    mooc = 'mooc', 'mooc'
+    spoc = 'spoc', 'spoc'
+    test = 'test', 'test'
+    demo = 'demo', 'demo'
+    other = 'other', 'other'

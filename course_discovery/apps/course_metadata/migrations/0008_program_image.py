@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='program',
             name='image',
-            field=models.ForeignKey(to='course_metadata.Image', blank=True, null=True, default=None),
+            field=models.ForeignKey(to='course_metadata.Image', blank=True, null=True, default=None, on_delete=models.CASCADE),
         ),
     ]

@@ -162,7 +162,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='course',
             name='partner',
-            field=models.ForeignKey(to='core.Partner'),
+            field=models.ForeignKey(to='core.Partner', on_delete=models.CASCADE),
         ),
         migrations.AlterField(
             model_name='historicalcourse',

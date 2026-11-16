@@ -37,7 +37,7 @@ INSTALLED_APPS = [
 THIRD_PARTY_APPS = [
     'release_util',
     'rest_framework',
-    'rest_framework_swagger',
+    'drf_yasg',
     'social_django',
     'waffle',
     'sortedm2m',
@@ -47,7 +47,6 @@ THIRD_PARTY_APPS = [
     'compressor',
     'django_filters',
     'django_fsm',
-    'storages',
     'django_comments',
     'django_sites_extensions',
     'taggit',
@@ -69,13 +68,12 @@ PROJECT_APPS = [
 INSTALLED_APPS += THIRD_PARTY_APPS
 INSTALLED_APPS += PROJECT_APPS
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.contrib.sites.middleware.CurrentSiteMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -103,6 +101,12 @@ DATABASES = {
     }
 }
 
+# Explicit default for auto-created primary keys (Django 5.2 emits models.W042
+# without it; existing migrations use AutoField, so BigAutoField is not forced
+# here — this only silences the warning for any future model without an
+# explicit primary key).
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
 # Internationalization
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#language-code
 # http://www.i18nguy.com/unicode/language-identifiers.html
@@ -123,8 +127,6 @@ PARLER_LANGUAGES = {
 TIME_ZONE = 'UTC'
 
 USE_I18N = True
-
-USE_L10N = True
 
 USE_TZ = True
 
@@ -343,6 +345,18 @@ STATIC_ROOT = root('assets')
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#static-url
 STATIC_URL = '/static/'
 
+# Django 5.2 storage backends (replaces DEFAULT_FILE_STORAGE / STATICFILES_STORAGE,
+# both removed in Django 5.1). Defaults match the prior FileSystemStorage /
+# StaticFilesStorage behaviour.
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+    },
+}
+
 # See: https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#std:setting-STATICFILES_DIRS
 STATICFILES_DIRS = (
     root('static'),
@@ -421,7 +435,7 @@ AUTHENTICATION_BACKENDS = (
 
 # Guardian settings
 ANONYMOUS_USER_NAME = None  # Do not allow anonymous user access
-GUARDIAN_MONKEY_PATCH = False  # Use the mixin on the User model instead of monkey-patching.
+GUARDIAN_MONKEY_PATCH_USER = False  # Use the mixin on the User model instead of monkey-patching.
 
 ENABLE_AUTO_AUTH = False
 AUTO_AUTH_USERNAME_PREFIX = 'auto_auth_'
@@ -522,8 +536,8 @@ LOGGING = {
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.SessionAuthentication',
-        'edx_rest_framework_extensions.authentication.BearerAuthentication',
-        'edx_rest_framework_extensions.authentication.JwtAuthentication',
+        'edx_rest_framework_extensions.auth.bearer.authentication.BearerAuthentication',
+        'edx_rest_framework_extensions.auth.jwt.authentication.JwtAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ),
     'DEFAULT_PAGINATION_CLASS': 'course_discovery.apps.api.pagination.PageNumberPagination',
@@ -695,10 +709,9 @@ PUBLISHER_UPGRADE_DEADLINE_DAYS = 10
 if os.environ.get('ENABLE_DJANGO_TOOLBAR', False):
     INSTALLED_APPS += [
         'debug_toolbar',
-        'elastic_panel',
     ]
 
-    MIDDLEWARE_CLASSES += (
+    MIDDLEWARE += (
         'debug_toolbar.middleware.DebugToolbarMiddleware',
     )
 
@@ -717,7 +730,6 @@ if os.environ.get('ENABLE_DJANGO_TOOLBAR', False):
         'debug_toolbar.panels.signals.SignalsPanel',
         'debug_toolbar.panels.logging.LoggingPanel',
         'debug_toolbar.panels.redirects.RedirectsPanel',
-        'elastic_panel.panel.ElasticDebugPanel'
     ]
 
 # Settings of Field `AutoSlugField`

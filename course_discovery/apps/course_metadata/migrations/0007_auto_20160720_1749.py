@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
                 ('modified', django_extensions.db.fields.ModificationDateTimeField(auto_now=True, verbose_name='modified')),
                 ('type', models.CharField(choices=[('facebook', 'Facebook'), ('twitter', 'Twitter'), ('blog', 'Blog'), ('others', 'Others')], db_index=True, max_length=15)),
                 ('value', models.CharField(max_length=500)),
-                ('course_run', models.ForeignKey(related_name='course_run_networks', to='course_metadata.CourseRun')),
+                ('course_run', models.ForeignKey(related_name='course_run_networks', to='course_metadata.CourseRun', on_delete=models.CASCADE)),
             ],
             options={
                 'verbose_name_plural': 'CourseRun SocialNetwork',
@@ -107,7 +107,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='personsocialnetwork',
             name='person',
-            field=models.ForeignKey(related_name='person_networks', to='course_metadata.Person'),
+            field=models.ForeignKey(related_name='person_networks', to='course_metadata.Person', on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='person',

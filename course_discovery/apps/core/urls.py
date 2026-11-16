@@ -1,10 +1,12 @@
 """
 URLs for the admin autocomplete lookups.
 """
-from django.conf.urls import url
+from django.urls import re_path
 
 from course_discovery.apps.core.lookups import UserAutocomplete
 
+app_name = "admin_core"
+
 urlpatterns = [
-    url(r'^user-autocomplete/$', UserAutocomplete.as_view(), name='user-autocomplete',),
+    re_path(r'^user-autocomplete/$', UserAutocomplete.as_view(), name='user-autocomplete',),
 ]

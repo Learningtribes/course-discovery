@@ -3,9 +3,6 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-import djchoices.choices
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -16,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='program',
             name='visibility',
-            field=models.IntegerField(choices=[(0, 'Full public'), (1, 'Accessible by URL'), (2, 'Private')], default=0, help_text='Visibility of program', validators=[djchoices.choices.ChoicesValidator({0: 'Full public', 1: 'Accessible by URL', 2: 'Private'})]),
+            field=models.IntegerField(choices=[(0, 'Full public'), (1, 'Accessible by URL'), (2, 'Private')], default=0, help_text='Visibility of program'),
         ),
     ]

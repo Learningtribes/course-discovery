@@ -1,11 +1,12 @@
+import os
 import random
 import string
 import uuid
 
 import requests
 from django.utils.functional import cached_property
+from django.utils.text import slugify
 from stdimage.models import StdImageFieldFile
-from stdimage.utils import UploadTo
 
 from course_discovery.apps.course_metadata.exceptions import MarketingSiteAPIClientException
 
@@ -35,6 +36,57 @@ def clean_query(query):
         query = query.replace(old, new)
 
     return query
+
+
+class UploadTo(object):
+    """Replicates ``stdimage.utils.UploadTo``, removed in django-stdimage 6.0.
+
+    Kept as a local base class so historical migrations that serialize
+    ``UploadToFieldNamePath`` / ``UploadToAutoSlug`` keep the same
+    ``(module, name, args, kwargs)`` deconstruction shape.
+    """
+    file_pattern = "%(name)s%(ext)s"
+    path_pattern = "%(path)s"
+
+    def __init__(self, *args, **kwargs):
+        self.kwargs = kwargs
+        self.args = args
+
+    def __call__(self, instance, filename):
+        path, ext = os.path.splitext(filename)
+        path, name = os.path.split(path)
+        defaults = {
+            'ext': ext,
+            'name': name,
+            'path': path,
+            'class_name': instance.__class__.__name__,
+        }
+        defaults.update(self.kwargs)
+        return os.path.join(self.path_pattern % defaults, self.file_pattern % defaults).lower()
+
+    def deconstruct(self):
+        path = "%s.%s" % (self.__class__.__module__, self.__class__.__name__)
+        return path, self.args, self.kwargs
+
+
+class UploadToAutoSlug(UploadTo):
+    """Replicates ``stdimage.utils.UploadToAutoSlug``, removed in django-stdimage 6.0."""
+    def __init__(self, populate_from, **kwargs):
+        self.populate_from = populate_from
+        super(UploadToAutoSlug, self).__init__(populate_from, **kwargs)
+
+    def __call__(self, instance, filename):
+        field_value = getattr(instance, self.populate_from)
+        self.kwargs.update({'name': slugify(field_value)})
+        return super(UploadToAutoSlug, self).__call__(instance, filename)
+
+
+class UploadToClassNameDir(UploadTo):
+    path_pattern = '%(class_name)s'
+
+
+class UploadToAutoSlugClassNameDir(UploadToClassNameDir, UploadToAutoSlug):
+    """Replicates ``stdimage.utils.UploadToAutoSlugClassNameDir``, removed in django-stdimage 6.0."""
 
 
 class UploadToFieldNamePath(UploadTo):

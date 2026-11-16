@@ -28,7 +28,7 @@ djangorestframework==3.17.1
 djangorestframework-csv==3.0.2
 djangorestframework-xml==2.0.0
 drf-nested-routers==0.95.3
-django-rest-swagger==2.2.0
+drf-yasg==1.21.15
 drf-extensions==0.8.0
 dry-rest-permissions==0.1.10
 edx-auth-backends==5.1.1
@@ -46,3 +46,4 @@ pycountry==26.2.16
 python-dateutil==2.9.0.post0
 pytz==2026.1.post1
 requests==2.33.1
+slumber==0.7.1

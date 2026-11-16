@@ -60,7 +60,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='subject',
             name='partner',
-            field=models.ForeignKey(to='core.Partner', null=True),
+            field=models.ForeignKey(to='core.Partner', null=True, on_delete=models.CASCADE),
         ),
         migrations.AddField(
             model_name='subject',
@@ -93,6 +93,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='subject',
             name='partner',
-            field=models.ForeignKey(to='core.Partner'),
+            field=models.ForeignKey(to='core.Partner', on_delete=models.CASCADE),
         ),
     ]

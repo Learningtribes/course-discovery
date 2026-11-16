@@ -14,7 +14,7 @@ from django.core.management import BaseCommand, CommandError
 from django.contrib.sites.models import Site
 from django.db import connection
 from django.db.models.signals import post_delete, post_save
-from edx_rest_api_client.client import EdxRestApiClient
+from edx_rest_api_client.client import get_oauth_access_token
 
 from course_discovery.apps.api.cache import api_change_receiver, set_api_timestamp
 from course_discovery.apps.course_metadata.data_loaders.api import CoursesApiDataLoader
@@ -132,7 +132,7 @@ class Command(BaseCommand):
                         prefix=prefix, lms_domain=site.domain,
                         end_point=courses_api_cfg['OIDC_URL_ROOT']
                     )
-                    access_token, __ = EdxRestApiClient.get_oauth_access_token(
+                    access_token, __ = get_oauth_access_token(
                         access_token_url,
                         courses_api_cfg['OIDC_KEY'], courses_api_cfg['OIDC_SECRET'],
                         token_type=token_type

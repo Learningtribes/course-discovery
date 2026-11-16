@@ -1,37 +1,19 @@
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 from django.urls import reverse
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
+from drf_yasg import openapi
+from drf_yasg.views import get_schema_view
 from rest_framework.permissions import AllowAny
-from rest_framework.renderers import CoreJSONRenderer
-from rest_framework.response import Response
-from rest_framework.schemas import SchemaGenerator
-from rest_framework.views import APIView
-from rest_framework_swagger.renderers import OpenAPIRenderer, SwaggerUIRenderer
 
 
-class SwaggerSchemaView(APIView):
-    permission_classes = [AllowAny]
-    renderer_classes = [
-        CoreJSONRenderer,
-        OpenAPIRenderer,
-        SwaggerUIRenderer,
-    ]
-
-    exclude_from_schema = True
-
-    def get(self, request):
-        generator = SchemaGenerator(title='Discovery API')
-        schema = generator.get_schema(request=request)
-
-        if not schema:
-            # get_schema() uses the same permissions check as the API endpoints.
-            # If we don't get a schema document back, it means the user is not
-            # authenticated or doesn't have permission to access the API.
-            # api_docs_permission_denied_handler() handles both of these cases.
-            return api_docs_permission_denied_handler(request)
-
-        return Response(schema)
+# django-rest-swagger 2.2.0 (CoreJSONRenderer / SchemaGenerator) was removed with
+# DRF 3.17's coreapi removal. Follow the platform: serve the API docs with drf-yasg.
+SwaggerSchemaView = get_schema_view(
+    openapi.Info(title='Discovery API', default_version='v1'),
+    public=False,
+    permission_classes=(AllowAny,),
+)
 
 
 def api_docs_permission_denied_handler(request):
@@ -48,7 +30,7 @@ def api_docs_permission_denied_handler(request):
         HttpResponseRedirect: Redirect to the login page if the user is not logged in. After a
             successful login, the user will be redirected back to the original path.
     """
-    if request.user and request.user.is_authenticated():
+    if request.user and request.user.is_authenticated:
         raise PermissionDenied(_('You are not permitted to access the API documentation.'))
 
     login_url = '{path}?next={next}'.format(path=reverse('login'), next=request.path)

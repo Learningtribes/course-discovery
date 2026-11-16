@@ -6,10 +6,12 @@ from django.contrib.sites.models import Site
 from django.core.cache import cache
 from django.db import models
 from django.utils.functional import cached_property
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django_extensions.db.models import TimeStampedModel
-from edx_rest_api_client.client import EdxRestApiClient
+from edx_rest_api_client.client import get_oauth_access_token
 from guardian.mixins import GuardianUserMixin
+
+from course_discovery.apps.core.api_client.utils import create_api_client
 
 
 class User(GuardianUserMixin, AbstractUser):
@@ -40,7 +42,7 @@ class User(GuardianUserMixin, AbstractUser):
 class UserThrottleRate(models.Model):
     """Model for configuring a rate limit per-user."""
 
-    user = models.ForeignKey(User)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     rate = models.CharField(
         max_length=50,
         help_text=_(
@@ -83,7 +85,7 @@ class Partner(TimeStampedModel):
     oidc_key = models.CharField(max_length=255, null=True, verbose_name=_('OpenID Connect Key'))
     oidc_secret = models.CharField(max_length=255, null=True, verbose_name=_('OpenID Connect Secret'))
     studio_url = models.URLField(max_length=255, null=True, blank=True, verbose_name=_('Studio URL'))
-    site = models.ForeignKey(Site, null=False, blank=False)
+    site = models.ForeignKey(Site, null=False, blank=False, on_delete=models.CASCADE)
     lms_url = models.URLField(max_length=255, null=True, blank=True, verbose_name=_('LMS URL'))
 
     def __str__(self):
@@ -114,7 +116,7 @@ class Partner(TimeStampedModel):
 
         if not access_token:
             url = '{root}/access_token'.format(root=self.oidc_url_root)
-            access_token, expiration_datetime = EdxRestApiClient.get_oauth_access_token(
+            access_token, expiration_datetime = get_oauth_access_token(
                 url,
                 self.oidc_key,
                 self.oidc_secret,
@@ -129,4 +131,4 @@ class Partner(TimeStampedModel):
     @cached_property
     def studio_api_client(self):
         studio_api_url = '{root}/api/v1/'.format(root=self.studio_url.strip('/'))
-        return EdxRestApiClient(studio_api_url, jwt=self.access_token)
+        return create_api_client(studio_api_url, jwt=self.access_token)

@@ -4,11 +4,11 @@ API Client for LMS.
 import logging
 
 from django.core.cache import cache
-from edx_rest_api_client.client import EdxRestApiClient
 from edx_rest_api_client.exceptions import SlumberBaseException
 from requests.exceptions import ConnectionError, Timeout  # pylint: disable=redefined-builtin
 
 from course_discovery.apps.api.utils import get_cache_key
+from course_discovery.apps.core.api_client.utils import create_api_client
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ class LMSAPIClient(object):
     """
 
     def __init__(self, site):
-        self.client = EdxRestApiClient(site.partner.lms_url, jwt=site.partner.access_token)
+        self.client = create_api_client(site.partner.lms_url, jwt=site.partner.access_token)
 
     def get_api_access_request(self, user):
         """
