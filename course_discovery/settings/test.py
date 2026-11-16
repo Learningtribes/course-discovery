@@ -38,6 +38,10 @@ DATABASES = {
 }
 
 JWT_AUTH['JWT_SECRET_KEY'] = 'course-discovery-jwt-secret-key'
+# drf-jwt 1.19.2 (via edx-drf-extensions) flipped the default from 'JWT' to
+# 'Bearer'. The platform still sends 'JWT {token}' (SuppliedJwtAuth), so keep the
+# test environment aligned with production (matches settings/py313.py).
+JWT_AUTH['JWT_AUTH_HEADER_PREFIX'] = 'JWT'
 
 LOGGING['handlers']['local'] = {'class': 'logging.NullHandler'}
 
