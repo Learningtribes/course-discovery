@@ -11,6 +11,7 @@ Commands:
   down     stop the runtime process + containers (keeps data)
   status   show container state, running processes, and health
   health   HTTP-check the discovery service
+  seed     idempotently seed django_site + core_partner (LMS data-fetch mapping)
   shell    interactive bash inside the runtime container (settings identity)
 
 Containers (names are fixed by the local environment contract):
@@ -168,6 +169,21 @@ def health():
     print("/health/ ->", r.stdout.strip())
 
 
+def seed():
+    """Idempotently seed django_site + core_partner (see ci/py313/seed_sites_and_partners.py)."""
+    cmd = ["docker", "exec", "-w", REPO_MOUNT]
+    for key, val in base_env().items():
+        cmd += ["-e", "%s=%s" % (key, val)]
+    cmd += [RUNTIME, "python3", "ci/py313/seed_sites_and_partners.py"]
+    # Use check=False and inspect stderr ourselves: with check=True the
+    # CalledProcessError would echo the full argv (including the DB password).
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    sys.stdout.write(r.stdout)
+    if r.returncode != 0:
+        sys.stderr.write(r.stderr)
+        raise SystemExit("seed failed (exit %d); see stderr above." % r.returncode)
+
+
 def shell():
     env = base_env()
     export = " ".join("export %s='%s'" % (k, v) for k, v in env.items())
@@ -199,8 +215,10 @@ if __name__ == "__main__":
         status()
     elif action == "health":
         health()
+    elif action == "seed":
+        seed()
     elif action == "shell":
         shell()
     else:
         usage()
-        raise SystemExit("usage: ops_discovery.py up|start|down|status|health|shell")
+        raise SystemExit("usage: ops_discovery.py up|start|down|status|health|seed|shell")
