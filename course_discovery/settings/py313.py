@@ -38,14 +38,36 @@ CACHES = {
     }
 }
 
-# Symmetric JWT key for local development. The legacy single-issuer form is
-# resolved by edx-drf-extensions' `get_first_jwt_issuer()` fallback path
-# (JWT_ISSUER / JWT_SECRET_KEY / JWT_AUDIENCE).
-JWT_AUTH['JWT_SECRET_KEY'] = os.environ.get('DISCOVERY_JWT_SECRET_KEY', 'discovery-py313-jwt-secret-key')
+# JWT interop with the platform py3 LMS (phase 6a local integration).
+# When DISCOVERY_LMS_JWT_SECRET is set, discovery verifies platform-signed JWTs
+# (HS256, issuer http://<lms>/oauth2) instead of its own self-signed tokens. The
+# shared secret is the platform's PY313_STARTUP_SECRET_KEY, injected by the runner.
+_lms_jwt_secret = os.environ.get('DISCOVERY_LMS_JWT_SECRET', '')
+if _lms_jwt_secret:
+    JWT_AUTH['JWT_ISSUERS'] = [{
+        'ISSUER': os.environ.get('DISCOVERY_LMS_JWT_ISSUER', 'http://localhost:18000/oauth2'),
+        'SECRET_KEY': _lms_jwt_secret,
+        'AUDIENCE': os.environ.get('DISCOVERY_LMS_JWT_AUDIENCE', 'py313-local-lms'),
+    }]
+else:
+    # Self-signed fallback (phase 4a behaviour) for a standalone discovery.
+    JWT_AUTH['JWT_SECRET_KEY'] = os.environ.get('DISCOVERY_JWT_SECRET_KEY', 'discovery-py313-jwt-secret-key')
 # drf-jwt's default header prefix changed from 'JWT' to 'Bearer' in the fork that
 # edx-drf-extensions 10.6.0 pins. The platform still signs/sends with 'JWT'
 # (SuppliedJwtAuth -> 'JWT {token}'), so restore the prefix here.
 JWT_AUTH['JWT_AUTH_HEADER_PREFIX'] = 'JWT'
+
+# Courses API: discovery fetches course metadata from the platform LMS via OAuth2
+# client-credentials. OIDC_KEY/OIDC_SECRET are the DOT application credentials
+# registered in the LMS (see the phase 6a local integration). Dev defaults match
+# that registration; override via env for staging/production.
+COURSES_API = {
+    'URL': '/api/courses/v1/',
+    'OIDC_URL_ROOT': '/oauth2',
+    'OIDC_KEY': os.environ.get('DISCOVERY_OIDC_KEY', 'lH8u2KmAwOP1CIUYAtCxQkp3jig86xKgbKrkOp3u'),
+    'OIDC_SECRET': os.environ.get('DISCOVERY_OIDC_SECRET', 'discovery-secret'),
+    'IS_SECURE': False,
+}
 
 # Avoid the deleted haystack signal processor still referenced by shared/test.py.
 HAYSTACK_SIGNAL_PROCESSOR = None
