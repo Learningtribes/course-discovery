@@ -28,9 +28,9 @@ class CharListFilter(filters.CharFilter):
 class UUIDListFilter(CharListFilter):
     """ Filters a field via a comma-delimited list of UUIDs. """
 
-    def __init__(self, name='uuid', label=None, widget=None, method=None, lookup_expr='in', required=False,
+    def __init__(self, field_name='uuid', label=None, widget=None, method=None, lookup_expr='in', required=False,
                  distinct=False, exclude=False, **kwargs):
-        super().__init__(name=name, label=label, widget=widget, method=method, lookup_expr=lookup_expr,
+        super().__init__(field_name=field_name, label=label, widget=widget, method=method, lookup_expr=lookup_expr,
                          required=required, distinct=distinct, exclude=exclude, **kwargs)
 
 
@@ -46,7 +46,7 @@ class FilterSetMixin:
 
 
 class CourseFilter(filters.FilterSet):
-    keys = CharListFilter(name='key', lookup_expr='in')
+    keys = CharListFilter(field_name='key', lookup_expr='in')
     uuids = UUIDListFilter()
 
     class Meta:
@@ -57,7 +57,7 @@ class CourseFilter(filters.FilterSet):
 class CourseRunFilter(FilterSetMixin, filters.FilterSet):
     active = filters.BooleanFilter(method='filter_active')
     marketable = filters.BooleanFilter(method='filter_marketable')
-    keys = CharListFilter(name='key', lookup_expr='in')
+    keys = CharListFilter(field_name='key', lookup_expr='in')
 
     @property
     def qs(self):
