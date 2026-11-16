@@ -21,7 +21,11 @@ def generate_jwt_payload(user):
 
 def generate_jwt_token(payload):
     """Generate a valid JWT token for authenticated requests."""
-    return jwt.encode(payload, settings.JWT_AUTH['JWT_SECRET_KEY']).decode('utf-8')
+    # PyJWT 2.x returns str; 1.x returned bytes. Normalise to str.
+    token = jwt.encode(payload, settings.JWT_AUTH['JWT_SECRET_KEY'])
+    if isinstance(token, bytes):
+        token = token.decode('utf-8')
+    return token
 
 
 def generate_jwt_header(token):

@@ -1,7 +1,7 @@
 import mock
 import pytest
 from django.apps import apps
-from factory import DjangoModelFactory
+from factory.django import DjangoModelFactory
 
 from course_discovery.apps.course_metadata.models import DataLoaderConfig, SubjectTranslation, TopicTranslation
 from course_discovery.apps.course_metadata.tests import factories

@@ -13,12 +13,12 @@ from course_discovery.apps.ietf_language_tags.models import LanguageTag
 # pylint: disable=unused-argument
 
 
-class AbstractMediaModelFactory(factory.DjangoModelFactory):
+class AbstractMediaModelFactory(factory.django.DjangoModelFactory):
     src = FuzzyURL()
     description = FuzzyText()
 
 
-class AbstractNamedModelFactory(factory.DjangoModelFactory):
+class AbstractNamedModelFactory(factory.django.DjangoModelFactory):
     name = FuzzyText()
 
 
@@ -37,7 +37,7 @@ class VideoFactory(AbstractMediaModelFactory):
         model = Video
 
 
-class SubjectFactory(factory.DjangoModelFactory):
+class SubjectFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Subject
 
@@ -49,7 +49,7 @@ class SubjectFactory(factory.DjangoModelFactory):
     uuid = factory.LazyFunction(uuid4)
 
 
-class TopicFactory(factory.DjangoModelFactory):
+class TopicFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Topic
 
@@ -71,7 +71,7 @@ class PrerequisiteFactory(AbstractNamedModelFactory):
         model = Prerequisite
 
 
-class CourseFactory(factory.DjangoModelFactory):
+class CourseFactory(factory.django.DjangoModelFactory):
     uuid = factory.LazyFunction(uuid4)
     key = FuzzyText(prefix='course-id/')
     title = FuzzyText(prefix="Test çօմɾʂҽ ")
@@ -82,7 +82,7 @@ class CourseFactory(factory.DjangoModelFactory):
         model = Course
 
 
-class CourseRunFactory(factory.DjangoModelFactory):
+class CourseRunFactory(factory.django.DjangoModelFactory):
     status = CourseRunStatus.Published
     uuid = factory.LazyFunction(uuid4)
     key = FuzzyText(prefix='course-run-id/', suffix='/fake')
@@ -97,7 +97,7 @@ class CourseRunFactory(factory.DjangoModelFactory):
         model = CourseRun
 
 
-class SeatFactory(factory.DjangoModelFactory):
+class SeatFactory(factory.django.DjangoModelFactory):
     type = FuzzyChoice([name for name, __ in Seat.SEAT_TYPE_CHOICES])
     price = FuzzyDecimal(0.0, 650.0)
     currency = factory.Iterator(Currency.objects.all())
@@ -110,7 +110,7 @@ class SeatFactory(factory.DjangoModelFactory):
         model = Seat
 
 
-class OrganizationFactory(factory.DjangoModelFactory):
+class OrganizationFactory(factory.django.DjangoModelFactory):
     uuid = factory.LazyFunction(uuid4)
     key = FuzzyText()
     name = FuzzyText()
@@ -126,7 +126,7 @@ class OrganizationFactory(factory.DjangoModelFactory):
         model = Organization
 
 
-class PersonFactory(factory.DjangoModelFactory):
+class PersonFactory(factory.django.DjangoModelFactory):
     uuid = factory.LazyFunction(uuid4)
     partner = factory.SubFactory(PartnerFactory)
     given_name = factory.Faker('first_name')
@@ -139,7 +139,7 @@ class PersonFactory(factory.DjangoModelFactory):
         model = Person
 
 
-class PositionFactory(factory.DjangoModelFactory):
+class PositionFactory(factory.django.DjangoModelFactory):
     person = factory.SubFactory(PersonFactory)
     title = FuzzyText()
     organization = factory.SubFactory(OrganizationFactory)
@@ -221,7 +221,7 @@ class ProgramFactory(factory.django.DjangoModelFactory):
             add_m2m_data(self.courses, extracted)
 
 
-class AbstractSocialNetworkModelFactory(factory.DjangoModelFactory):
+class AbstractSocialNetworkModelFactory(factory.django.DjangoModelFactory):
     type = FuzzyChoice([name for name, __ in AbstractSocialNetworkModel.SOCIAL_NETWORK_CHOICES])
     value = FuzzyText()
 

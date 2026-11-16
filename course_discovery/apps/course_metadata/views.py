@@ -55,7 +55,7 @@ class CourseMetadataRefresher(View):
                 'max_workers': 1,
                 'is_threadsafe': True
             }
-            username = jwt.decode(access_token, verify=False)['preferred_username']
+            username = jwt.decode(access_token, options={'verify_signature': False})['preferred_username']
             if username:
                 kwargs['username'] = username
 

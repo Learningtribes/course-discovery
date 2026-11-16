@@ -13,7 +13,7 @@ def add_m2m_data(m2m_relation, data):
         m2m_relation.add(*data)
 
 
-class SiteFactory(factory.DjangoModelFactory):
+class SiteFactory(factory.django.DjangoModelFactory):
     class Meta:
         model = Site
 
@@ -21,7 +21,7 @@ class SiteFactory(factory.DjangoModelFactory):
     name = factory.Faker('name')
 
 
-class UserFactory(factory.DjangoModelFactory):
+class UserFactory(factory.django.DjangoModelFactory):
     username = factory.Sequence(lambda n: 'user_%d' % n)
     password = factory.PostGenerationMethodCall('set_password', USER_PASSWORD)
     is_active = True
@@ -40,7 +40,7 @@ class StaffUserFactory(UserFactory):
     is_staff = True
 
 
-class PartnerFactory(factory.DjangoModelFactory):
+class PartnerFactory(factory.django.DjangoModelFactory):
     name = factory.Sequence(lambda n: 'test-partner-{}'.format(n))  # pylint: disable=unnecessary-lambda
     short_code = factory.Sequence(lambda n: 'test{}'.format(n))  # pylint: disable=unnecessary-lambda
     courses_api_url = '{root}/api/courses/v1/'.format(root=FuzzyUrlRoot().fuzz())

@@ -155,7 +155,7 @@ class Command(BaseCommand):
 
             logger.info('*** Apply course API URL => {} '.format(courses_api_url))
 
-            username = jwt.decode(access_token, verify=False)['preferred_username']
+            username = jwt.decode(access_token, options={'verify_signature': False})['preferred_username']
             kwargs = {'username': username} if username else {}
             kwargs['modified_x_min_ago'] = modified_x_min_ago
 

@@ -1,6 +1,6 @@
 import responses
 from edx_rest_api_client.auth import SuppliedJwtAuth
-from edx_rest_api_client.client import EdxRestApiClient
+from slumber import API
 
 from course_discovery.apps.course_metadata.tests.factories import PartnerFactory
 
@@ -11,12 +11,13 @@ ACCESS_TOKEN_TYPE = 'JWT'
 class ApiClientTestMixin(object):
     def test_api_client(self):
         """ Verify the property returns an API client with the correct authentication. """
-        loader = self.loader_class(self.partner, self.api_url, ACCESS_TOKEN, ACCESS_TOKEN_TYPE)
+        loader = self.loader_class(self.courses_api_cfg, self.api_url, ACCESS_TOKEN, ACCESS_TOKEN_TYPE)
         client = loader.api_client
-        self.assertIsInstance(client, EdxRestApiClient)
+        # `create_api_client` (the EdxRestApiClient replacement) returns a slumber.API.
+        self.assertIsInstance(client, API)
         # NOTE (CCB): My initial preference was to mock the constructor and ensure the correct auth arguments
         # were passed. However, that seems nearly impossible. This is the next best alternative. It is brittle, and
-        # may break if we ever change the underlying request class of EdxRestApiClient.
+        # may break if we ever change the underlying request class of the API client.
         self.assertIsInstance(client._store['session'].auth, SuppliedJwtAuth)  # pylint: disable=protected-access
 
 
@@ -28,7 +29,10 @@ class DataLoaderTestMixin(object):
     def setUp(self):
         super(DataLoaderTestMixin, self).setUp()
         self.partner = PartnerFactory()
-        self.loader = self.loader_class(self.partner, self.api_url, ACCESS_TOKEN, ACCESS_TOKEN_TYPE)
+        # The fork renamed `partner` to `courses_api_cfg` (commit 5a28aad0) and now passes a
+        # dict (settings.COURSES_API) rather than a Partner instance to the loader.
+        self.courses_api_cfg = {'URL': self.partner.courses_api_url}
+        self.loader = self.loader_class(self.courses_api_cfg, self.api_url, ACCESS_TOKEN, ACCESS_TOKEN_TYPE)
 
     @property
     def api_url(self):  # pragma: no cover
@@ -42,6 +46,6 @@ class DataLoaderTestMixin(object):
 
     def test_init(self):
         """ Verify the constructor sets the appropriate attributes. """
-        self.assertEqual(self.loader.partner.short_code, self.partner.short_code)
+        self.assertEqual(self.loader.courses_api_cfg, self.courses_api_cfg)
         self.assertEqual(self.loader.access_token, ACCESS_TOKEN)
         self.assertEqual(self.loader.token_type, ACCESS_TOKEN_TYPE.lower())

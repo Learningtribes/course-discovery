@@ -75,7 +75,7 @@ class CoursesApiDataLoaderTests(ApiClientTestMixin, DataLoaderTestMixin, TestCas
 
     @property
     def api_url(self):
-        return self.partner.courses_api_url
+        return self.courses_api_cfg['URL']
 
     def mock_api(self, bodies=None):
         if not bodies:
