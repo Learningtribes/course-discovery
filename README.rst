@@ -8,6 +8,22 @@ Course Discovery Service  |Travis|_ |Codecov|_
 
 Service providing access to consolidated course and program metadata.
 
+Python 3.13 / Django 5.2 Upgrade
+--------------------------------
+
+This repository is being migrated from Python 3.5 / Django 1.11 to **Python 3.13 /
+Django 5.2**. The upgrade plan, dependency conflict resolutions, phase-by-phase
+checklist, acceptance matrix, and environment setup guide (including the
+``django_site`` / ``core_partner`` mapping required to fetch course data from the
+LMS) are maintained in the Triboo documentation repository:
+
+- `course-discovery Python 3.13 / Django 5.2 upgrade plan <https://github.com/Learningtribes/triboo-doc/blob/py3-discovery/docs/py313/course-discovery-py313-upgrade-2026-11-13.md>`_ (Chinese)
+
+The upgrade work lives on the ``py3-master`` branch. See §3.6.1 of the plan for how
+``refresh_course_metadata`` obtains its connection parameters (``settings.COURSES_API``,
+loaded from ``discovery.auth.json`` in production) and how the ``core_partner`` table
+provides the org-to-partner ownership mapping.
+
 Documentation
 -------------
 
