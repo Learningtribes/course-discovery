@@ -135,7 +135,7 @@ class ProgramAdmin(admin.ModelAdmin):
             messages.add_message(request, messages.ERROR, msg)
 
     class Media:
-        js = ('bower_components/jquery-ui/ui/minified/jquery-ui.min.js',
+        js = ('bundles/jquery-ui.min.js',
               'js/sortable_select.js')
 
 

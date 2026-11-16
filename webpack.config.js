@@ -1,18 +1,18 @@
 var BundleTracker = require('webpack-bundle-tracker'),
-    ExtractTextPlugin = require('extract-text-webpack-plugin'),
+    MiniCssExtractPlugin = require('mini-css-extract-plugin'),
+    CopyPlugin = require('copy-webpack-plugin'),
     path = require('path'),
     webpack = require('webpack'),
     loaders = [
         {
-            loader: 'css-loader',
-            options: {
-                minimize: true
-            }
+            loader: 'css-loader'
         },
         {
             loader: 'sass-loader',
             options: {
-                includePaths: [path.resolve('./sass/')]
+                sassOptions: {
+                    includePaths: [path.resolve('./sass/')]
+                }
             }
         }
     ],
@@ -20,6 +20,7 @@ var BundleTracker = require('webpack-bundle-tracker'),
 
 module.exports = {
     context: context,
+    mode: 'production',
 
     entry: {
         'base.style': './sass/main-ltr.scss',
@@ -38,27 +39,33 @@ module.exports = {
             jQuery: 'jquery',
             'window.jQuery': 'jquery'
         }),
-        new ExtractTextPlugin('[name]-[hash].css')
+        new MiniCssExtractPlugin({
+            filename: '[name]-[hash].css'
+        }),
+        // jquery-ui is loaded directly by Django admin (ProgramAdmin.Media),
+        // so copy its UMD bundle into the static bundles dir instead of
+        // bundling it. This replaces the old bower_components/ path.
+        new CopyPlugin([
+            {
+                from: path.resolve(__dirname, 'node_modules/jquery-ui/dist/jquery-ui.min.js'),
+                to: 'jquery-ui.min.js'
+            }
+        ])
     ],
 
     module: {
         rules: [
             {
                 test: /\.s?css$/,
-                use: ExtractTextPlugin.extract({
-                    fallback: 'style-loader',
-                    use: loaders
-                })
+                use: [MiniCssExtractPlugin.loader].concat(loaders)
             },
             {
                 test: /\.woff2?$/,
                 // Inline small woff files and output them below font
                 use: [{
-                    loader: 'url-loader',
+                    loader: 'file-loader',
                     options: {
-                        name: 'font/[name]-[hash].[ext]',
-                        limit: 5000,
-                        mimetype: 'application/font-woff'
+                        name: 'font/[name]-[hash].[ext]'
                     }
                 }]
             },
