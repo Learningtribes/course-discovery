@@ -103,15 +103,26 @@ def tag_exists(tag, env=None):
     raise SystemExit('Cannot determine whether %s exists remotely:\n%s' % (tag, result.stderr))
 
 
+def containerd_store():
+    info = json.loads(subprocess.check_output(['docker', 'info', '--format', '{{json .DriverStatus}}'], text=True))
+    return ['driver-type', 'io.containerd.snapshotter.v1'] in info
+
+
 def builder_args(name):
-    """Reuse the current builder when it can already push an index; else create a container driver."""
+    """Name an explicit builder, else use the default one if the daemon can push an index itself.
+
+    Only the containerd image store lets the `docker` driver emit a multi-platform index.
+    Without it, the default builder fails with "Multi-platform build is not supported for
+    the docker driver", so a `docker-container` builder is required.
+    """
     if name:
         return ['--builder', name]
-    if subprocess.run(['docker', 'buildx', 'inspect'], capture_output=True).returncode == 0:
+    if containerd_store():
         return []
-    name = 'py313-discovery-index'
+    name = 'py313-discovery-builder'
     if subprocess.run(['docker', 'buildx', 'inspect', name], capture_output=True).returncode:
-        subprocess.run(['docker', 'buildx', 'create', '--name', name, '--driver', 'docker-container'], check=True)
+        subprocess.run(['docker', 'buildx', 'create', '--name', name, '--driver', 'docker-container',
+                        '--bootstrap'], check=True)
     return ['--builder', name]
 
 
