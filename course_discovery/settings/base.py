@@ -470,6 +470,24 @@ syslog_address = '/var/run/syslog' if platform.system().lower() == 'darwin' else
 syslog_format = '[service_variant=discovery][%(name)s] %(levelname)s [{hostname}  %(process)d] ' \
                 '[%(pathname)s:%(lineno)d] - %(message)s'.format(hostname=hostname)
 
+# Containers have no syslog socket at /dev/log. SysLogHandler raises on every emit there
+# (logging prints the traceback to stderr and drops the record), so fall back to a silent
+# handler. The console handler still writes to stdout, so no record is lost, and hosts that
+# do provide the socket keep the original behavior.
+if os.path.exists(syslog_address):
+    local_handler = {
+        'level': level,
+        'class': 'logging.handlers.SysLogHandler',
+        'address': syslog_address,
+        'formatter': 'syslog_format',
+        'facility': SysLogHandler.LOG_LOCAL0,
+    }
+else:
+    local_handler = {
+        'level': level,
+        'class': 'logging.NullHandler',
+    }
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -486,13 +504,7 @@ LOGGING = {
             'formatter': 'standard',
             'stream': 'ext://sys.stdout',
         },
-        'local': {
-            'level': level,
-            'class': 'logging.handlers.SysLogHandler',
-            'address': syslog_address,
-            'formatter': 'syslog_format',
-            'facility': SysLogHandler.LOG_LOCAL0,
-        },
+        'local': local_handler,
     },
     'loggers': {
         'django': {

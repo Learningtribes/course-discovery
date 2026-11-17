@@ -30,7 +30,9 @@ except KeyError:
     CONFIG_FILE = environ['COURSE_DISCOVERY_CFG']
 
 with open(CONFIG_FILE, encoding='utf-8') as f:
-    config_from_yaml = yaml.load(f)
+    # safe_load is required: PyYAML >= 6 removed the implicit default Loader from load(),
+    # and the default Loader also allows arbitrary object construction.
+    config_from_yaml = yaml.safe_load(f)
 
     # Remove the items that should be used to update dicts, and apply them separately rather
     # than pumping them into the local vars.
