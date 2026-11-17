@@ -114,10 +114,12 @@ class Command(BaseCommand):
                 for signal in (post_save, post_delete):
                     signal.disconnect(receiver=api_change_receiver, sender=model)
 
-            token_type = 'JWT'
+            # The LMS resolves a Bearer token by its stored checksum, so an opaque token works
+            # where a JWT does not (see local `COURSES_API['TOKEN_TYPE']`). Production keeps JWT.
+            courses_api_cfg = getattr(settings, 'COURSES_API', None)
+            token_type = (courses_api_cfg or {}).get('TOKEN_TYPE', 'JWT')
             access_token = None
             courses_api_url = None
-            courses_api_cfg = getattr(settings, 'COURSES_API', None)
             if not courses_api_cfg:
                 raise CommandError('No COURSES_API available!')
             if Site.objects.count() == 0:

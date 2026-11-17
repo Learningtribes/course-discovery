@@ -7,8 +7,9 @@
 # discovery is a single Django service, so there is no infra `/opt/venv`, no wheels
 # multi-stage, and no RabbitMQ/Mongo/Elasticsearch client libraries to pre-build.
 #
-# The application itself is NOT baked in. `ops_discovery.py install` creates an
-# isolated `/runtime/venv` (a durable named volume) and installs
+# The application itself is NOT baked in. The devstack replay
+# (`devstack/docker/py313/probe/startup-20261024-run01/replay/discovery.py install`)
+# creates an isolated `/runtime/venv` (a durable named volume) and installs
 # requirements/py313/local.txt into it at runtime. This image only declares the
 # OS prerequisites for compiling that set (mysqlclient, lxml, cryptography) plus
 # the Node toolchain that builds the Webpack frontend assets.
@@ -45,8 +46,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
     && rm -f /tmp/node.tar.xz
 
 # Runtime: build deps for the app venv, plus Node/npm copied from the node stage,
-# plus uv (which `ops_discovery.py install` uses to create /runtime/venv and
-# install requirements/py313/local.txt into it). The platform's internal-delivery
+# plus uv (which the devstack replay uses to create /runtime/venv and install
+# requirements/py313/local.txt into it). The platform's internal-delivery
 # target pins uv==0.11.23; discovery's lock has no --require-hashes so any modern
 # uv works, and 0.13.8 is the version the already-verified local environment uses.
 FROM base
@@ -60,6 +61,6 @@ COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm
 
-# The app is run via `manage.py runserver`, dispatched by ops_discovery.py; the
-# container just stays alive between commands.
+# The app is run via `manage.py runserver`, dispatched by the devstack replay's
+# `discovery.py`; the container just stays alive between commands.
 CMD ["sleep", "infinity"]

@@ -68,6 +68,12 @@ COURSES_API = {
     'OIDC_KEY': os.environ.get('DISCOVERY_OIDC_KEY', 'lH8u2KmAwOP1CIUYAtCxQkp3jig86xKgbKrkOp3u'),
     'OIDC_SECRET': os.environ.get('DISCOVERY_OIDC_SECRET', 'discovery-secret'),
     'IS_SECURE': False,
+    # The platform's `OAuth2Authentication` resolves a Bearer token by
+    # sha256(token) against `oauth2_provider.AccessToken.token_checksum`, so the opaque
+    # token a `token_type=Bearer` request returns authenticates, while the JWT a
+    # `token_type=JWT` request returns is rejected with `token_nonexistent`. Verified
+    # against the py3.13 LMS: Bearer -> 200 with the course list, JWT -> 401.
+    'TOKEN_TYPE': os.environ.get('DISCOVERY_COURSES_API_TOKEN_TYPE', 'Bearer'),
 }
 
 # Avoid the deleted haystack signal processor still referenced by shared/test.py.
