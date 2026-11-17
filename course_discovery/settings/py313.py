@@ -33,8 +33,9 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
         'LOCATION': os.environ.get('CACHE_LOCATION', 'discovery-py3-memcached:11211'),
-        # A new namespace: 3.13 must not read 3.5-written pickles (§2.4).
-        'KEY_PREFIX': 'discovery-py313',
+        # A new namespace: 3.13 must not read 3.5-written pickles (§2.4). The prefix can be overridden so
+        # several runs can share one memcached (the devstack bring-up passes its run's cache prefix).
+        'KEY_PREFIX': os.environ.get('DISCOVERY_CACHE_PREFIX', 'discovery-py313'),
     }
 }
 
