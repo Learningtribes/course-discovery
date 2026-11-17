@@ -15,6 +15,12 @@ from course_discovery.settings.base import *  # pylint: disable=wildcard-import,
 
 DEBUG = True
 
+# The container has no syslog socket at /dev/log; without this every log record raises
+# "Logging error" tracebacks. Same override as settings/devstack.py: the console handler keeps the output.
+LOGGING['handlers']['local'] = {
+    'class': 'logging.NullHandler',
+}
+
 ALLOWED_HOSTS = ['*']
 
 DATABASES = {
