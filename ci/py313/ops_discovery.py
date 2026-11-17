@@ -74,6 +74,10 @@ RUNTIME_HOST_PORT = os.environ.get("DISCOVERY_RUNTIME_PORT", "18381")
 # reach it as `http://discovery:8000`. Attached by `connect`, not `create`.
 PLATFORM_NETWORK = os.environ.get("DISCOVERY_PLATFORM_NETWORK", "py313-sync1029r1")
 PLATFORM_ALIASES = ("discovery", "lms", "cms")
+# When the platform runs LMS and CMS in ONE container (the replay layout), discovery must not take the
+# `lms`/`cms` aliases itself (it would answer its own requests); it takes `discovery` only and resolves
+# `lms`/`cms` to that container (names the platform ALLOWED_HOSTS accepts). Empty keeps the alias behaviour above.
+PLATFORM_RUNTIME = os.environ.get("DISCOVERY_PLATFORM_RUNTIME", "")
 
 
 # Where the container's /private dir lives on the host (holds mysql-root-password).
@@ -183,12 +187,32 @@ def connect():
     if PLATFORM_NETWORK in current:
         print("already attached to %s (aliases %s)" % (PLATFORM_NETWORK, ", ".join(PLATFORM_ALIASES)))
         return
+    aliases = ("discovery",) if PLATFORM_RUNTIME else PLATFORM_ALIASES
     args = ["network", "connect"]
-    for alias in PLATFORM_ALIASES:
+    for alias in aliases:
         args += ["--alias", alias]
     args += [PLATFORM_NETWORK, RUNTIME]
     docker(*args)
-    print("attached %s to %s as %s" % (RUNTIME, PLATFORM_NETWORK, ", ".join(PLATFORM_ALIASES)))
+    print("attached %s to %s as %s" % (RUNTIME, PLATFORM_NETWORK, ", ".join(aliases)))
+    map_platform_hosts()
+
+
+def map_platform_hosts():
+    """Point `lms`/`cms` at the platform runtime container inside the discovery runtime.
+
+    /etc/hosts of a container is rebuilt on every stop/start, so this runs after each start. No-op unless
+    DISCOVERY_PLATFORM_RUNTIME names the platform container.
+    """
+    if not PLATFORM_RUNTIME:
+        return
+    ip = docker("inspect", PLATFORM_RUNTIME, "-f",
+                '{{(index .NetworkSettings.Networks "%s").IPAddress}}' % PLATFORM_NETWORK, check=False).stdout.strip()
+    if not ip:
+        print("WARNING: %s has no address on network %s; lms/cms are not mapped" % (PLATFORM_RUNTIME, PLATFORM_NETWORK))
+        return
+    docker("exec", RUNTIME, "sh", "-c",
+           "grep -v ' lms cms$' /etc/hosts > /tmp/hosts.new; echo '%s lms cms' >> /tmp/hosts.new; cat /tmp/hosts.new > /etc/hosts" % ip)
+    print("%s resolves lms, cms -> %s (%s)" % (RUNTIME, ip, PLATFORM_RUNTIME))
 
 
 def migrate():
@@ -259,6 +283,8 @@ def start_containers():
     for c in (MYSQL, MEMCACHED, RUNTIME):
         if not running(c):
             docker("start", c)
+    if PLATFORM_RUNTIME and docker("network", "inspect", PLATFORM_NETWORK, check=False).returncode == 0:
+        map_platform_hosts()
     deadline = time.time() + 120
     while time.time() < deadline:
         r = docker("exec", MYSQL, "sh", "-c",
