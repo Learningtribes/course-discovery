@@ -177,6 +177,8 @@ markdown==3.10.2
     # via -r requirements/py313/base.in
 markupsafe==3.0.4
     # via jinja2
+mysqlclient==2.2.8
+    # via -r requirements/py313/base.in
 oauthlib==4.0.1
     # via
     #   requests-oauthlib
@@ -202,6 +204,8 @@ pyjwt==2.15.1
     #   edx-drf-extensions
     #   edx-rest-api-client
     #   social-auth-core
+pymemcache==4.0.0
+    # via -r requirements/py313/base.in
 pymongo==4.20.0
     # via edx-opaque-keys
 pynacl==1.6.2

@@ -2,6 +2,19 @@
 # Versions from docs/py313/course-discovery-py313-upgrade-2026-11-13.md §2.1/§2.2.
 # Removed vs base.txt: boto, django-choices, django-haystack, django-storages,
 # djangorestframework-jwt, drf-haystack, elasticsearch.
+#
+# mysqlclient lives here (not in production.in) because
+# `course_discovery/settings/py313.py` is MySQL-only — unlike the upstream
+# `local.py`, which defaults to SQLite. Without it every `manage.py` command
+# under py313 settings dies with `ModuleNotFoundError: No module named 'MySQLdb'`.
+# It has no Python dependencies, so it stays a single leaf entry in the locks.
+#
+# pymemcache follows the same reasoning: `py313.py` selects
+# `django.core.cache.backends.memcached.PyMemcacheCache`, whereas the upstream
+# `local.py` used `LocMemCache`. Django builds the cache backend lazily, so a
+# missing pymemcache only surfaces on the first cache access (e.g. the first
+# `manage.py migrate` after any session/cache touch) — not at import time.
+# Also zero-dependency.
 
 beautifulsoup4==4.14.3
 cryptography==47.0.0
@@ -41,8 +54,10 @@ edx-rest-api-client==7.0.0
 html2text==2025.4.15
 jsonfield==3.2.0
 markdown==3.10.2
+mysqlclient==2.2.8
 pillow==12.2.0
 pycountry==26.2.16
+pymemcache==4.0.0
 python-dateutil==2.9.0.post0
 pytz==2026.1.post1
 requests==2.33.1

@@ -201,7 +201,7 @@ markdown==3.10.2
 markupsafe==3.0.4
     # via jinja2
 mysqlclient==2.2.8
-    # via -r requirements/py313/production.in
+    # via -r requirements/py313/base.in
 newrelic==14.1.0
     # via -r requirements/py313/production.in
 oauthlib==4.0.1
@@ -231,7 +231,7 @@ pyjwt==2.15.1
     #   edx-rest-api-client
     #   social-auth-core
 pymemcache==4.0.0
-    # via -r requirements/py313/production.in
+    # via -r requirements/py313/base.in
 pymongo==4.20.0
     # via edx-opaque-keys
 pynacl==1.6.2
