@@ -24,6 +24,41 @@ The upgrade work lives on the ``py3-master`` branch. See §3.6.1 of the plan for
 loaded from ``discovery.auth.json`` in production) and how the ``core_partner`` table
 provides the org-to-partner ownership mapping.
 
+Running and building this service (py3.13)
+------------------------------------------
+
+This service no longer has its own orchestration entry point. Its lifecycle is owned by the
+Devstack py3.13 replay, which manages it as an optional run sidecar — one container on the
+run's network, reusing that run's MySQL (its own database) and memcached. Pass
+``DISCOVERY_REPO`` when creating the run and the whole lifecycle follows automatically::
+
+    # build the runtime image (the only manual step)
+    cd <devstack>
+    make py313-build-discovery DISCOVERY_REPO=<this checkout>
+
+    # create and bring up the run with discovery
+    make py313-dev-up RUN_ID=dev313 LMS_PORT=18000 CMS_PORT=18010 \
+      PLATFORM_REPO=<platform-worktree> THEME_REPO=<theme> \
+      DISCOVERY_REPO=<this checkout> DISCOVERY_IMAGE=ltdps/discovery:py313-local \
+      DISCOVERY_PORT=18381
+
+    # day-to-day
+    make py313-start / py313-stop / py313-restart / py313-status
+    make py313-shell-discovery / py313-status-discovery / py313-update-db-discovery
+
+The complete command reference — every course-discovery py3.13 command, with its project
+location, function and usage, plus the retired Python 2 commands that must not be used — is
+`Appendix B of the upgrade plan
+<https://github.com/Learningtribes/triboo-doc/blob/py3-discovery/docs/py313/course-discovery-py313-upgrade-2026-11-13.md#appendix-b--command-reference-all-course-discovery-py313-commands>`_:
+B.1 Devstack lifecycle targets, B.2 discovery-specific targets, B.3 the replay phase
+dispatcher, B.4 the platform-side OAuth2 application seed, B.5 commands in this repository
+(``ci/py313/build-runtime-image.py``, ``ci/py313/seed_sites_and_partners.py``,
+``ci/py313/run_tests_mysql.sh``), B.6 the settings that steer the LMS integration, B.7 retired
+commands, and B.8 the first-time ordering from an empty host.
+
+``ci/py313/README.md`` in this repository covers the same ground for the image and the
+site/partner seed contract.
+
 Documentation
 -------------
 
