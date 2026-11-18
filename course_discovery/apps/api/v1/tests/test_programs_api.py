@@ -300,3 +300,143 @@ class ProgramCoursesApiTests(ProgramApiTestCase):
 
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual([course.uuid for course in self.program.courses.all()], [second.uuid, first.uuid])
+
+
+class ProgramContextArgumentTests(ProgramApiTestCase):
+    """The view forwards `courses` from the request body into the serializer context."""
+
+    def test_a_courses_list_in_the_body_reaches_the_context(self):
+        """Studio sends the draft course list with the create/update payload."""
+        course = CourseFactory()
+        payload = {
+            'title': 'Context Path', 'org': 'edX', 'status': 'unpublished',
+            'languages': ['en'], 'courses': [str(course.uuid)],
+        }
+
+        response = self.client.post(reverse('api:v1:program-list'), payload, format='json')
+
+        self.assertEqual(response.status_code, 201, response.content)
+
+    def test_an_invalid_body_reports_the_field_errors(self):
+        """A non-title validation failure must surface the field errors, not a bare 500."""
+        response = self.client.post(
+            reverse('api:v1:program-list'),
+            {'title': 'Bad Payload', 'org': 'edX', 'status': 'unpublished', 'languages': ['xx-nope']},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertIn('fields error', str(response.json()))
+
+    def test_an_invalid_patch_body_reports_the_field_errors(self):
+        program = ProgramFactory()
+
+        response = self.client.patch(
+            reverse('api:v1:program-detail', kwargs={'uuid': program.uuid}),
+            {'languages': ['xx-nope']},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 500)
+        self.assertIn('fields error', str(response.json()))
+
+
+class ProgramCoursesTitleSearchTests(ProgramApiTestCase):
+    """Studio's add-courses dialog searches the draft list by title."""
+
+    def setUp(self):
+        super().setUp()
+        self.program = ProgramFactory()
+        self.course = CourseFactory(title='Distinctive Course Title')
+        CourseRunFactory(course=self.course)
+
+    def courses_url(self):
+        return reverse('api:v1:courses-list', kwargs={'program_uuid': self.program.uuid})
+
+    def test_a_title_in_the_body_is_used_to_filter(self):
+        response = self.client.post(
+            self.courses_url(),
+            {'course_ids': [self.course.course_runs.first().key], 'title': 'Distinctive'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, 201, response.content)
+
+    def test_listing_a_program_without_a_courses_key_returns_an_empty_list(self):
+        """`MinimalProgramCourseSerializer` omits `courses` when none are attached."""
+        response = self.client.get(self.courses_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
+
+
+class ProgramCoursesDateRangeTests(ProgramApiTestCase):
+    """The program window is the earliest start and the latest end of its runs."""
+
+    def setUp(self):
+        super().setUp()
+        self.program = ProgramFactory()
+
+    def courses_url(self):
+        return reverse('api:v1:courses-list', kwargs={'program_uuid': self.program.uuid})
+
+    def test_two_runs_produce_the_widest_window(self):
+        early = CourseRunFactory(
+            course=CourseFactory(), start='2026-01-01T00:00:00Z', end='2026-02-01T00:00:00Z'
+        )
+        late = CourseRunFactory(
+            course=CourseFactory(), start='2026-06-01T00:00:00Z', end='2026-12-31T00:00:00Z'
+        )
+
+        response = self.client.post(
+            self.courses_url(), {'course_ids': [late.key, early.key], 'exec': '1'}, format='json'
+        )
+
+        self.assertEqual(response.status_code, 201, response.content)
+        body = response.json()[0]
+        self.assertLessEqual(body['program_start'], late.start)
+        self.assertGreaterEqual(body['program_end'], late.end)
+
+    def test_a_run_without_an_end_date_does_not_break_the_window(self):
+        CourseRunFactory(course=CourseFactory(), start='2026-01-01T00:00:00Z', end=None)
+        open_ended = CourseRunFactory(course=CourseFactory(), start='2026-03-01T00:00:00Z', end=None)
+
+        response = self.client.post(
+            self.courses_url(), {'course_ids': [open_ended.key], 'exec': '1'}, format='json'
+        )
+
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertIsNotNone(response.json()[0]['program_start'])
+
+
+class ProgramCoursesAttachTests(ProgramApiTestCase):
+    def setUp(self):
+        super().setUp()
+        self.program = ProgramFactory()
+        self.course = CourseFactory()
+        self.course_run = CourseRunFactory(course=self.course)
+
+    def courses_url(self):
+        return reverse('api:v1:courses-list', kwargs={'program_uuid': self.program.uuid})
+
+    def test_attaching_an_already_present_course_is_a_no_op(self):
+        """Re-publishing a path must not try to add the same course twice."""
+        self.program.courses.add(self.course)
+        before = self.program.courses.count()
+
+        response = self.client.post(
+            self.courses_url(), {'course_ids': [self.course_run.key], 'exec': '1'}, format='json'
+        )
+
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertEqual(self.program.courses.count(), before)
+
+    def test_attaching_accepts_a_form_encoded_body(self):
+        """A `QueryDict` is immutable in Django 3+; the view must flip it before writing."""
+        response = self.client.post(
+            self.courses_url(),
+            data=json.dumps({'course_ids': [self.course_run.key], 'exec': '1'}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 201, response.content)

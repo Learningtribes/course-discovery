@@ -4,7 +4,7 @@ import mock
 import responses
 from django.contrib.sites.models import Site
 from django.core.management import CommandError, call_command
-from django.test import TransactionTestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
 
 from course_discovery.apps.core.tests.factories import PartnerFactory
 from course_discovery.apps.core.tests.utils import mock_api_callback
@@ -156,3 +156,80 @@ class RefreshCourseMetadataCommandTests(TransactionTestCase):
                     )
                     expected_calls = [mock.call('%s failed!', loader_class.__name__) for loader_class in loader_classes]
                     mock_logger.exception.assert_has_calls(expected_calls)
+
+
+class RefreshCourseMetadataErrorPathTests(TransactionTestCase):
+    """The command's refusals. Each one stops a sync that would otherwise corrupt data."""
+
+    courses_api_cfg = {
+        'URL': '/api/courses/v1/',
+        'OIDC_URL_ROOT': '/oauth2',
+        'OIDC_KEY': 'test-oidc-key',
+        'OIDC_SECRET': 'test-oidc-secret',
+        'IS_SECURE': False,
+    }
+
+    def setUp(self):
+        super().setUp()
+        self.override = override_settings(COURSES_API=self.courses_api_cfg)
+        self.override.enable()
+        self.addCleanup(self.override.disable)
+        Site.objects.all().delete()
+        Site.objects.create(domain='test-lms.example.com', name='test-lms')
+
+    def test_a_missing_courses_api_configuration_is_refused(self):
+        """Without `COURSES_API` there is no LMS to read from."""
+        with override_settings(COURSES_API=None), self.assertRaisesMessage(
+            CommandError, 'No COURSES_API available'
+        ):
+            call_command('refresh_course_metadata')
+
+    def test_an_empty_site_table_is_refused(self):
+        """The site domain is the LMS host; without a row there is nowhere to call."""
+        Site.objects.all().delete()
+
+        with self.assertRaisesMessage(CommandError, 'No valid site records'):
+            call_command('refresh_course_metadata')
+
+    def test_only_one_sync_runs_at_a_time(self):
+        """Two concurrent syncs would both decide which courses to delete."""
+        from course_discovery.apps.course_metadata.management.commands.refresh_course_metadata import _ScriptLock
+
+        with mock.patch(
+            'course_discovery.apps.course_metadata.management.commands.'
+            'refresh_course_metadata.fcntl.lockf', side_effect=BlockingIOError
+        ), self.assertRaises(BlockingIOError):
+            with _ScriptLock(modified_x_min_ago=None):
+                pass
+
+    def test_an_incremental_run_says_so_in_the_log(self):
+        """The log line is how an operator distinguishes a full sync from an incremental one."""
+        from course_discovery.apps.course_metadata.management.commands.refresh_course_metadata import _ScriptLock
+
+        with self.assertLogs(
+            'course_discovery.apps.course_metadata.management.commands.refresh_course_metadata',
+            level='INFO',
+        ) as logs:
+            _ScriptLock(modified_x_min_ago=60)
+
+        self.assertIn('modified-x-min-ago=60', '\n'.join(logs.output))
+
+
+class ExecuteParallelLoaderTests(TestCase):
+    """Each worker process opens its own database connection, then runs the loader."""
+
+    def test_the_inherited_connection_is_closed_before_loading(self):
+        """A forked connection shared by two processes breaks MySQL messaging."""
+        with mock.patch(
+            'course_discovery.apps.course_metadata.management.commands.'
+            'refresh_course_metadata.connection.close'
+        ) as close, mock.patch(
+            'course_discovery.apps.course_metadata.management.commands.'
+            'refresh_course_metadata.execute_loader'
+        ) as loader:
+            execute_parallel_loader(CoursesApiDataLoader, {'URL': '/api/courses/v1/'}, 'https://lms/api')
+
+        close.assert_called_once_with()
+        loader.assert_called_once_with(
+            CoursesApiDataLoader, {'URL': '/api/courses/v1/'}, 'https://lms/api'
+        )

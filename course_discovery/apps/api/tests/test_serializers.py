@@ -1,6 +1,7 @@
 # pylint: disable=no-member,test-inherits-tests
 import datetime
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from pytz import UTC
 from rest_framework.test import APIRequestFactory
@@ -10,7 +11,7 @@ from course_discovery.apps.api.serializers import (
     CourseRunSerializer, CourseSerializer,
     MinimalCourseRunSerializer, MinimalCourseSerializer,
     MinimalProgramCourseSerializer, MinimalProgramSerializer,
-    ProgramSerializer
+    ProgramSerializer, _validate_comma_separated_languages_list
 )
 from course_discovery.apps.api.tests.mixins import SiteMixin
 from course_discovery.apps.core.tests.factories import UserFactory
@@ -332,3 +333,86 @@ class ProgramSerializerTests(MinimalProgramSerializerTests):
         assert len(expected[0]['course_runs']) == 1
         assert sorted(serializer.data['courses'][0]['course_runs'], key=lambda x: x['key']) == \
             sorted(expected[0]['course_runs'], key=lambda x: x['key'])
+
+
+class ProgramLanguageValidationTests(TestCase):
+    """`languages` is a comma-separated list; the validator is what rejects a bad payload."""
+
+    def _serializer(self, languages):
+        payload = {
+            'title': 'Validation Path', 'org': 'edX', 'status': 'unpublished',
+            'languages': languages, 'courses': [],
+        }
+        return MinimalProgramSerializer(data=payload, context={'request': None})
+
+    def test_a_supported_code_passes(self):
+        serializer = self._serializer(['en'])
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_an_unknown_code_is_reported_as_a_field_error(self):
+        serializer = self._serializer(['xx-not-a-language'])
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('languages', serializer.errors)
+
+    def test_the_validator_itself_rejects_a_non_list(self):
+        """DRF's `ListField` wraps a bare string before validating, so assert on the validator.
+
+        Reaching this branch through the serializer is not possible; it is reachable only when
+        someone calls the validator directly, which the field definition allows.
+        """
+        with self.assertRaises(ValidationError):
+            _validate_comma_separated_languages_list('en')
+
+    def test_the_validator_itself_accepts_a_list_of_known_codes(self):
+        self.assertIsNone(_validate_comma_separated_languages_list(['en']))
+
+
+class ProgramPrefetchQuerysetTests(TestCase):
+    def test_a_uuid_argument_scopes_the_queryset_to_that_program(self):
+        wanted = ProgramFactory()
+        ProgramFactory()
+
+        queryset = MinimalProgramSerializer.prefetch_queryset(uuid=str(wanted.uuid))
+
+        self.assertEqual([program.uuid for program in queryset], [wanted.uuid])
+
+    def test_an_org_argument_scopes_the_queryset_to_that_tenant(self):
+        wanted = ProgramFactory(org='org-a')
+        ProgramFactory(org='org-b')
+
+        queryset = MinimalProgramSerializer.prefetch_queryset(org='org-a')
+
+        self.assertEqual([program.org for program in queryset], ['org-a'])
+
+
+class ProgramCourseTitleFilterTests(TestCase):
+    """Studio's add-courses search narrows the draft list by title.
+
+    `get_courses` applies `query_by_title` on top of the draft uuid list, so a search in the
+    add-courses dialog shows only the matching subset rather than everything already drafted.
+    """
+
+    def _serialize(self, uuids, title=None):
+        program = ProgramFactory()
+        context = {'request': None, 'draft_program_courses_uuids': uuids}
+        if title is not None:
+            context['query_by_title'] = title
+        return MinimalProgramSerializer(program, context=context).get_courses(program)
+
+    def test_a_title_filter_narrows_the_draft_list(self):
+        matching = CourseFactory(title='Distinctive Course Title')
+        other = CourseFactory(title='Something Else')
+
+        courses = self._serialize([str(matching.uuid), str(other.uuid)], title='Distinctive')
+
+        self.assertEqual([course['key'] for course in courses], [matching.key])
+
+    def test_without_a_title_every_draft_course_is_returned(self):
+        first = CourseFactory(title='Alpha')
+        second = CourseFactory(title='Beta')
+
+        courses = self._serialize([str(first.uuid), str(second.uuid)])
+
+        self.assertEqual({course['key'] for course in courses}, {first.key, second.key})
