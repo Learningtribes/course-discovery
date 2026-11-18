@@ -117,7 +117,9 @@ def delete_expired_courses(removed_course_keys):
         Course.objects.filter(key__in=removed_course_keys).delete()
 
     except Exception:
-        logger.error('Got exception while deleting courses : {}', format_exc())
+        # logging formats with `%`, not `str.format`: a `{}` placeholder plus a positional
+        # argument raised TypeError, so a prune failure crashed the refresh it was meant to survive.
+        logger.error('Got exception while deleting courses : %s', format_exc())
 
 
 class SearchQuerySetWrapper(object):
