@@ -73,3 +73,29 @@ class RefreshCourseMetadataIngestContractTests(TransactionTestCase):
             set(Course.objects.values_list('org', flat=True)),
             {'MITx', 'KyotoUx'}
         )
+
+    @responses.activate
+    def test_ingest_accepts_an_opaque_bearer_token(self):
+        """`TOKEN_TYPE='Bearer'` yields a token with no claims; decoding it as a JWT is a hard error.
+
+        The py3.13 LMS resolves a Bearer token by its stored checksum, so the client-credentials
+        grant returns an opaque string rather than a JWT. Reading `preferred_username` out of it
+        raised `DecodeError: Not enough segments` before any course was fetched.
+        """
+        bodies = mock_data.COURSES_API_BODIES
+        url = self.courses_api_url + 'courses/'
+        responses.add_callback(
+            responses.GET,
+            url,
+            callback=mock_api_callback(url, bodies, pagination=True),
+            content_type=JSON
+        )
+
+        with override_settings(COURSES_API=dict(self.courses_api_cfg, TOKEN_TYPE='Bearer')), \
+                mock.patch('course_discovery.apps.course_metadata.management.commands.'
+                           'refresh_course_metadata.get_oauth_access_token',
+                           return_value=('opaque-token-without-segments', None)):
+            call_command('refresh_course_metadata')
+
+        self.assertEqual(Course.objects.count(), len(bodies))
+        self.assertEqual(CourseRun.objects.count(), len(bodies))

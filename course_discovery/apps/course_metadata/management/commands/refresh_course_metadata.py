@@ -157,7 +157,11 @@ class Command(BaseCommand):
 
             logger.info('*** Apply course API URL => {} '.format(courses_api_url))
 
-            username = jwt.decode(access_token, options={'verify_signature': False})['preferred_username']
+            # An opaque token carries no claims, so the username cannot be read from it. The LMS
+            # authenticates the Application owner from the token itself and returns the same
+            # courses either way, verified against this run's API.
+            username = (jwt.decode(access_token, options={'verify_signature': False})['preferred_username']
+                        if token_type == 'JWT' else None)
             kwargs = {'username': username} if username else {}
             kwargs['modified_x_min_ago'] = modified_x_min_ago
 
