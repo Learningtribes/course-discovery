@@ -11,6 +11,8 @@ runner), never from this file, so it can be committed.
 """
 import os
 
+from django.core.exceptions import ImproperlyConfigured
+
 from course_discovery.settings.base import *  # pylint: disable=wildcard-import,unused-wildcard-import,wrong-import-position
 
 DEBUG = True
@@ -59,14 +61,27 @@ else:
 JWT_AUTH['JWT_AUTH_HEADER_PREFIX'] = 'JWT'
 
 # Courses API: discovery fetches course metadata from the platform LMS via OAuth2
-# client-credentials. OIDC_KEY/OIDC_SECRET are the DOT application credentials
-# registered in the LMS (see the phase 6a local integration). Dev defaults match
-# that registration; override via env for staging/production.
+# client-credentials. OIDC_KEY/OIDC_SECRET identify the DOT application this run
+# registered in the LMS, and the runner derives both from the run secret, so they
+# differ per run. A static default would authenticate as whatever application
+# happened to own that pair, and the failure would surface as an opaque 401 from
+# the LMS rather than as a missing setting, so both are required.
+def _required(name):
+    value = os.environ.get(name)
+    if not value:
+        raise ImproperlyConfigured(
+            '%s is required: it must match the DOT application the LMS registered for '
+            'this run. Bring the environment up through the devstack py313 runner, which '
+            'derives it.' % name
+        )
+    return value
+
+
 COURSES_API = {
     'URL': '/api/courses/v1/',
     'OIDC_URL_ROOT': '/oauth2',
-    'OIDC_KEY': os.environ.get('DISCOVERY_OIDC_KEY', 'lH8u2KmAwOP1CIUYAtCxQkp3jig86xKgbKrkOp3u'),
-    'OIDC_SECRET': os.environ.get('DISCOVERY_OIDC_SECRET', 'discovery-secret'),
+    'OIDC_KEY': _required('DISCOVERY_OIDC_KEY'),
+    'OIDC_SECRET': _required('DISCOVERY_OIDC_SECRET'),
     'IS_SECURE': False,
     # The platform's `OAuth2Authentication` resolves a Bearer token by
     # sha256(token) against `oauth2_provider.AccessToken.token_checksum`, so the opaque
