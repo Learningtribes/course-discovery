@@ -52,9 +52,16 @@ location, function and usage, plus the retired Python 2 commands that must not b
 <https://github.com/Learningtribes/triboo-doc/blob/py3-discovery/docs/py313/course-discovery-py313-upgrade-2026-11-13.md#appendix-b--command-reference-all-course-discovery-py313-commands>`_:
 B.1 Devstack lifecycle targets, B.2 discovery-specific targets, B.3 the replay phase
 dispatcher, B.4 the platform-side OAuth2 application seed, B.5 commands in this repository
-(``ci/py313/build-runtime-image.py``, ``ci/py313/seed_sites_and_partners.py``,
-``ci/py313/run_tests_mysql.sh``), B.6 the settings that steer the LMS integration, B.7 retired
-commands, and B.8 the first-time ordering from an empty host.
+(``ci/py313/build-runtime-image.py``, ``ci/py313/seed_sites_and_partners.py``), B.6 the
+settings that steer the LMS integration, B.7 retired commands, and B.8 the first-time
+ordering from an empty host.
+
+Tests and Django's system checks run through the same dispatcher, so no test tooling needs a
+separate entry point::
+
+    make py313-check-discovery
+    make py313-test-discovery                                  # whole suite, MySQL
+    make py313-test-discovery SELECTORS=course_discovery/apps/core
 
 ``ci/py313/README.md`` in this repository covers the same ground for the image and the
 site/partner seed contract.

@@ -34,6 +34,10 @@ DATABASES = {
         'HOST': os.environ.get('DB_HOST', ''),
         'PORT': os.environ.get('DB_PORT', ''),
         'CONN_MAX_AGE': int(os.environ.get('CONN_MAX_AGE', 0)),
+        # Django's runner otherwise creates `test_<NAME>`, a name the application user is not
+        # granted. DB_TEST_NAME names the database the deploy grants instead, so a MySQL run
+        # never needs global CREATE. Mirrors the platform's BRINGUP_TEST_DATABASE_NAME.
+        **({'TEST': {'NAME': os.environ['DB_TEST_NAME']}} if os.environ.get('DB_TEST_NAME') else {}),
     },
 }
 

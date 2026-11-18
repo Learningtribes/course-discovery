@@ -53,8 +53,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
 FROM base
 ARG BUILD_DEPS
 ARG UV_VERSION=0.13.8
+# `git` is not needed by any current lock entry (the one non-PyPI input is a `file://`
+# tarball), but `uv pip install` of a `git+` requirement fails hard without it
+# ("Git operation failed / Git executable not found"). The platform image carries it;
+# keeping the two images comparable avoids a surprise when a pin moves to a VCS URL.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ${BUILD_DEPS} curl ca-certificates \
+        ${BUILD_DEPS} curl ca-certificates git \
     && rm -rf /var/lib/apt/lists/* \
     && pip install --no-cache-dir "uv==${UV_VERSION}"
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
