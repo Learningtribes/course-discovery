@@ -121,20 +121,45 @@ InvalidCacheBackendError: Could not find backend
 Module "django.core.cache.backends.memcached" does not define a "MemcachedCache" attribute/class
 ```
 
-Change the backend in `discovery.yml`:
+Change the backend in `discovery.yml`. Do **not** hand-edit the Ansible output: use
+`ci/py313/generate_discovery_config.py`, which writes a corrected copy into a
+service-owned directory and refuses to emit a file that cannot start:
 
-```yaml
-CACHES:
-    default:
-        BACKEND: django.core.cache.backends.memcached.PyMemcacheCache
-        KEY_PREFIX: discovery
-        LOCATION:
-        - memcache
+```sh
+# run with the service venv so the backend class can be imported and proved to exist
+/edx/app/discovery/venvs/discovery/bin/python ci/py313/generate_discovery_config.py \
+    --source /edx/etc/discovery.yml \
+    --out /edx/app/discovery/py313-config/discovery.yml \
+    --print-env
+# -> export DISCOVERY_CFG="/edx/app/discovery/py313-config/discovery.yml"
 ```
 
-The same migration applies to the platform's `lms.env.json` / `cms.env.json` `CACHES`, and
-`CELERY_RESULT_BACKEND` needs `cache+memcached://<host>:11211/` because `djcelery` is absent
-from the 3.13 runtime.
+It rewrites **every** cache alias (a named alias left on `MemcachedCache` fails only when
+something first reads it), sets `KEY_PREFIX: discovery-py313`, derives
+`CELERY_RESULT_BACKEND: cache+memcached://<host>:11211/`, and preserves every other value in
+the source file — this repository does not own the deployment's Elasticsearch URL, e-mail
+host or partner id, so it must not rewrite them.
+
+**Why a generated copy instead of an Ansible change.** The Platform hit the same wall and
+solved it the same way: `platform/ci/py313/bringup/generate_aws_config.py` writes
+`lms.env.json` / `cms.env.json` into a Platform-owned directory and the service is pointed at
+it with `CONFIG_ROOT`; the Ansible output is not reused. Discovery follows that precedent
+because it needs no change to the `configuration` repository, keeps this repository's `py3-master`
+branch self-sufficient, and leaves a clean rollback: point `DISCOVERY_CFG` back at
+`/edx/etc/discovery.yml`.
+
+The `KEY_PREFIX` change is not cosmetic. `drf-extensions` pickles whole API responses into
+the cache, so a key written by the python-memcached era cannot be unpickled by the new code —
+that is a deserialisation error, not a cache miss (§2.4 of the upgrade plan).
+
+`DISCOVERY_CFG` is an Ansible **role default** (`playbooks/roles/discovery/defaults/main.yml`),
+so a py3.13 tenant can point it at the generated file from inventory alone
+(`group_vars/<tenant>/vars.yml`), leaving the `configuration` repository untouched and the
+Django 1.11 tenants on the old file.
+
+The same backend migration applies to the platform's `lms.env.json` / `cms.env.json`
+`CACHES`; for Platform this is already covered by `generate_aws_config.py`, so nothing in the
+`configuration` repository changes there either.
 
 ### Verify before migrating
 
@@ -148,6 +173,7 @@ from django.conf import settings
 d = settings.DATABASES['default']
 print(d['ENGINE'], d['HOST'], d['PORT'], d['NAME'], d['USER'], bool(d['PASSWORD']))
 print(settings.CACHES['default']['BACKEND'])
+print(settings.CACHES['default']['KEY_PREFIX'])
 "
 python manage.py showmigrations --plan | head   # reads the real database; pending list only, writes nothing
 python manage.py migrate --noinput
@@ -156,3 +182,8 @@ python manage.py migrate --noinput
 `manage.py` defaults to `course_discovery.settings.local` (SQLite at
 `course_discovery/default.db`). Running `manage.py migrate` without sourcing the env file
 creates tables in a file, reports no error, and leaves MySQL empty.
+
+The generator itself is covered by `ci/py313/test_generate_discovery_config.py` (14 tests):
+every alias is rewritten, the source's unrelated values survive, a `MemcachedCache` or a
+missing `CACHES` block is rejected, the file lands at mode 0640, and the source path can never
+be overwritten in place.
