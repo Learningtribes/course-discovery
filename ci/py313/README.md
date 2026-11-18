@@ -78,3 +78,81 @@ deployment changes behaviour.
 
 `course_metadata/views.py` still requests a JWT because it decodes the token to read
 `preferred_username`, so that single-course refresh path is not aligned yet.
+
+## 5. Production settings (`course_discovery.settings.production`)
+
+`settings.py313` (section above) is the Devstack path and reads **only** environment
+variables (`DB_*`, `CACHE_LOCATION`, `DISCOVERY_*`). A server deployed with the legacy
+ansible layout instead runs `settings.production`, which reads two files and no `DB_*`
+variables:
+
+| Input | Read by | Notes |
+| --- | --- | --- |
+| `$DISCOVERY_CFG` or `$COURSE_DISCOVERY_CFG` | `production.py:28-35` | One of the two must be set, else `KeyError`. Every YAML key becomes a Django setting. |
+| `<repo root>/discovery.auth.json` | `production.py:59` | Path is hard-coded off `PROJECT_ROOT`, not configurable. Must carry `ENGINE`, `NAME`, `USER`, `PASSWORD`, `HOST`, `PORT` — `DB_OVERRIDES` indexes all six, so a missing key raises `KeyError`. |
+
+`/edx/app/discovery/discovery_env` (written by ansible) normally supplies both:
+
+```sh
+export DJANGO_SETTINGS_MODULE="course_discovery.settings.production"
+export DISCOVERY_CFG="/edx/etc/discovery.yml"
+```
+
+### Precedence, and why editing both files misleads
+
+`discovery.auth.json` **replaces** `DATABASES` wholesale after the YAML is applied, so a
+`DATABASES` block in `discovery.yml` is dead weight — edit `discovery.auth.json`. Only
+`DB_MIGRATION_{PASS,ENGINE,USER,NAME,HOST,PORT}` override it afterwards, per field.
+
+`CACHES`, `SECRET_KEY`, `JWT_AUTH` and the rest come from the YAML. Neither `base.py` nor
+`production.py` defines a `CACHES` default, so a YAML without one leaves Django with no
+cache backend at all.
+
+### Cache backend must change for Django 5.2
+
+`django.core.cache.backends.memcached.MemcachedCache` was removed in Django 4.1; only
+`PyMemcacheCache` (pymemcache) and `PyLibMCCache` (pylibmc) remain. A `discovery.yml`
+carried over from the Django 1.11 deployment therefore fails at `django.setup()`, before any
+database connection, because `django-parler` touches the cache at import time:
+
+```
+InvalidCacheBackendError: Could not find backend
+'django.core.cache.backends.memcached.MemcachedCache':
+Module "django.core.cache.backends.memcached" does not define a "MemcachedCache" attribute/class
+```
+
+Change the backend in `discovery.yml`:
+
+```yaml
+CACHES:
+    default:
+        BACKEND: django.core.cache.backends.memcached.PyMemcacheCache
+        KEY_PREFIX: discovery
+        LOCATION:
+        - memcache
+```
+
+The same migration applies to the platform's `lms.env.json` / `cms.env.json` `CACHES`, and
+`CELERY_RESULT_BACKEND` needs `cache+memcached://<host>:11211/` because `djcelery` is absent
+from the 3.13 runtime.
+
+### Verify before migrating
+
+```sh
+cd /edx/app/discovery/discovery
+source /edx/app/discovery/discovery_env        # required; without it manage.py falls back to settings.local (SQLite)
+
+python -c "
+import django; django.setup()
+from django.conf import settings
+d = settings.DATABASES['default']
+print(d['ENGINE'], d['HOST'], d['PORT'], d['NAME'], d['USER'], bool(d['PASSWORD']))
+print(settings.CACHES['default']['BACKEND'])
+"
+python manage.py showmigrations --plan | head   # reads the real database; pending list only, writes nothing
+python manage.py migrate --noinput
+```
+
+`manage.py` defaults to `course_discovery.settings.local` (SQLite at
+`course_discovery/default.db`). Running `manage.py migrate` without sourcing the env file
+creates tables in a file, reports no error, and leaves MySQL empty.
