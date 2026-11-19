@@ -35,6 +35,27 @@ write a lock when the digest does not match, so an installer can never be pointe
 nobody reviewed. The Devstack replay runs exactly this step
 (`discovery.py install`, evidence label `install-discovery-lock`).
 
+The replay uses `uv pip sync`, not `uv pip install`: the lock is the definition of that
+environment, and `install` only adds, so a re-install after a lock change left behind the
+packages the lock no longer listed.
+
+### Regenerating a lock
+
+`uv pip compile` cannot resolve `@COMPANIONS_DIR@` — it treats the value as a real directory.
+`ci/py313/regenerate-lock.py` compiles against a temporary copy with the directory resolved,
+then restores the placeholder and rewrites the header, so the committed file records a command
+that works anywhere:
+
+```sh
+python ci/py313/regenerate-lock.py local                 # write requirements/py313/local.txt
+python ci/py313/regenerate-lock.py base local production test
+python ci/py313/regenerate-lock.py local --check          # exit 1 when the lock is stale
+```
+
+`--check` is the guard against the failure that motivated the script: `local.txt` had drifted
+from `base.in` and still carried `django-rest-swagger` plus its five transitive dependencies
+long after the input dropped them.
+
 Build it locally with the Devstack entry point, which is the supported path:
 
 ```sh
