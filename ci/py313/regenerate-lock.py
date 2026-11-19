@@ -49,11 +49,17 @@ def canonical_header(name):
 
 
 def compile_lock(name, companions_dir, workdir):
-    """Return the compiled text for `name`, with the placeholder restored."""
+    """Return the compiled text for `name`, with the placeholder restored.
+
+    `--generate-hashes` makes the lock hash-pinned: every package carries `--hash` entries, and
+    an installer refuses a wheel or sdist whose digest differs from what was reviewed. The
+    `file://` companion is hashed from the archive bytes (matching `companions/manifest.json`).
+    """
     source = workdir / (name + '.in')
     output = workdir / (name + '.txt')
     subprocess.run(
-        ['uv', 'pip', 'compile', '--python-version', '3.13', str(source), '-o', str(output)],
+        ['uv', 'pip', 'compile', '--python-version', '3.13', '--generate-hashes',
+         str(source), '-o', str(output)],
         cwd=str(workdir), check=True, capture_output=True, text=True)
     return normalize(output.read_text(), companions_dir, workdir, name)
 

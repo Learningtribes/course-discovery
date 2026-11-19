@@ -4,6 +4,26 @@ Discovery's Python 3.13 development runtime is **not** built by Devstack. Devsta
 this checkout read-write into a container and drives it; the image only supplies the OS and
 toolchain. Two consequences follow, and this directory owns both.
 
+## Production readiness of the dependency set
+
+`requirements/py313/*.txt` are **hash-locked and reproducible, but installed only by the
+devstack replay** today. Concretely:
+
+- Every lock carries `--hash` entries (`uv pip compile --generate-hashes`), so an installer
+  refuses any wheel or sdist whose digest differs from what was reviewed. The one non-PyPI
+  input — the patched `edx-drf-extensions` sdist — is pinned by `--hash` from its archive bytes
+  and by `companions/manifest.json` (upstream URL, patch name, and per-file digests).
+- That archive is committed to git but is **not opaque**: `rebuild-companion.py` reconstructs
+  it from the public upstream sdist plus the committed patch and verifies the bytes match, so a
+  reviewer can reproduce the exact file.
+- The `file://@COMPANIONS_DIR@/...` URL is not a devstack mount path; it is a placeholder that
+  `materialize-lock.py` resolves for the environment at hand, verifying the archive before it
+  writes a lock.
+- There is **no production image and no production install path yet**: `ci/py313/Dockerfile`
+  builds only the development base image, `requirements/py313/production.txt` is installed by
+  nothing, and no staging/production deploy code exists. Until one does, treat these locks as
+  devstack-replay-only despite being hash-locked.
+
 ## 1. What the image contains
 
 `Dockerfile` is the same shape as the platform's `devstack/docker/py313/Dockerfile`:
