@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Compatibility shim for the removed ``EdxRestApiClient``.
 
@@ -10,8 +9,6 @@ not a drop-in. This mirrors the platform's ``openedx/core/lib/api_client.py``,
 which rebuilds the old behaviour from ``SuppliedJwtAuth`` / ``BearerAuth`` plus
 ``slumber.API``.
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 from edx_rest_api_client.auth import BearerAuth, SuppliedJwtAuth
 from edx_rest_api_client.client import USER_AGENT
 from requests import Session

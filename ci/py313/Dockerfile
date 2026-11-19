@@ -9,7 +9,7 @@
 #
 # The application itself is NOT baked in. The devstack replay
 # (`devstack/docker/py313/probe/startup-20261024-run01/replay/discovery.py install`)
-# creates an isolated `/runtime/venv` (a durable named volume) and installs
+# creates an isolated `/edx/app/discovery/venvs/discovery` (a durable named volume) and installs
 # requirements/py313/local.txt into it at runtime. This image only declares the
 # OS prerequisites for compiling that set (mysqlclient, lxml, cryptography) plus
 # the Node toolchain that builds the Webpack frontend assets.
@@ -46,7 +46,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
     && rm -f /tmp/node.tar.xz
 
 # Runtime: build deps for the app venv, plus Node/npm copied from the node stage,
-# plus uv (which the devstack replay uses to create /runtime/venv and install
+# plus uv (which the devstack replay uses to create /edx/app/discovery/venvs/discovery and install
 # requirements/py313/local.txt into it). The platform's internal-delivery
 # target pins uv==0.11.23; discovery's lock has no --require-hashes so any modern
 # uv works, and 0.13.8 is the version the already-verified local environment uses.

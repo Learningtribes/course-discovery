@@ -44,7 +44,7 @@ CACHES = {
 # JWT interop with the platform py3 LMS (phase 6a local integration).
 # When DISCOVERY_LMS_JWT_SECRET is set, discovery verifies platform-signed JWTs
 # (HS256, issuer http://<lms>/oauth2) instead of its own self-signed tokens. The
-# shared secret is the platform's PY313_STARTUP_SECRET_KEY, injected by the runner.
+# shared secret is the platform's BRINGUP_STARTUP_SECRET_KEY, injected by the runner.
 _lms_jwt_secret = os.environ.get('DISCOVERY_LMS_JWT_SECRET', '')
 if _lms_jwt_secret:
     JWT_AUTH['JWT_ISSUERS'] = [{

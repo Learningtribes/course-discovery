@@ -442,12 +442,13 @@ AUTO_AUTH_USERNAME_PREFIX = 'auto_auth_'
 
 SOCIAL_AUTH_STRATEGY = 'auth_backends.strategies.EdxDjangoStrategy'
 
-# Set these to the correct values for your OAuth2/OpenID Connect provider (e.g., devstack)
-SOCIAL_AUTH_EDX_OIDC_KEY = 'replace-me'
-SOCIAL_AUTH_EDX_OIDC_SECRET = 'replace-me'
-SOCIAL_AUTH_EDX_OIDC_URL_ROOT = 'replace-me'
-SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL = 'replace-me'
-SOCIAL_AUTH_EDX_OIDC_ID_TOKEN_DECRYPTION_KEY = SOCIAL_AUTH_EDX_OIDC_SECRET
+# The `EdXOAuth2` backend is named `edx-oauth2`, so social-auth reads `SOCIAL_AUTH_EDX_OAUTH2_*`.
+# The former `SOCIAL_AUTH_EDX_OIDC_*` keys (and the ID token decryption key) belong to the removed
+# `EdXOpenIdConnect` backend and are ignored. Set these to the values of your LMS OAuth2 provider.
+SOCIAL_AUTH_EDX_OAUTH2_KEY = 'replace-me'
+SOCIAL_AUTH_EDX_OAUTH2_SECRET = 'replace-me'
+SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT = 'replace-me'
+SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_URL = 'replace-me'
 
 # Request the user's permissions in the ID token
 EXTRA_SCOPE = ['permissions']
