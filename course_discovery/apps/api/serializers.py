@@ -1,6 +1,3 @@
-import datetime
-
-import pytz
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -8,9 +5,7 @@ from django.db.models import Case
 from django.db.models import When
 from django.db.models.query import Prefetch
 from rest_framework import serializers
-from rest_framework.fields import (
-    DictField, ListField
-)
+from rest_framework.fields import ListField
 
 from course_discovery.apps.course_metadata.choices import CourseRunStatus
 from course_discovery.apps.course_metadata.models import (
@@ -219,60 +214,6 @@ class MinimalProgramSerializer(serializers.ModelSerializer):
         )
 
         return course_serializer.data
-
-    def sort_courses(self, program, course_runs):
-        """
-        Sorting by enrollment start then by course start yields a list ordered by course start, with
-        ties broken by enrollment start. This works because Python sorting is stable: two objects with
-        equal keys appear in the same order in sorted output as they appear in the input.
-
-        Courses are only created if there's at least one course run belonging to that course, so
-        course_runs should never be empty. If it is, key functions in this method attempting to find the
-        min of an empty sequence will raise a ValueError.
-        """
-
-        def min_run_enrollment_start(course):
-            # Enrollment starts may be empty. When this is the case, we make the same assumption as
-            # the LMS: no enrollment_start is equivalent to (offset-aware) datetime.datetime.min.
-            min_datetime = datetime.datetime.min.replace(tzinfo=pytz.UTC)
-
-            # Course runs excluded from the program are excluded here, too.
-            #
-            # If this becomes a candidate for optimization in the future, be careful sorting null values
-            # in the database. PostgreSQL and MySQL sort null values as if they are higher than non-null
-            # values, while SQLite does the opposite.
-            #
-            # For more, refer to https://docs.djangoproject.com/en/1.10/ref/models/querysets/#latest.
-            _course_runs = [course_run for course_run in course_runs if course_run.course == course]
-
-            # Return early if we have no course runs since min() will fail.
-            if not _course_runs:
-                return min_datetime
-
-            run = min(_course_runs, key=lambda run: run.enrollment_start or min_datetime)
-
-            return run.enrollment_start or min_datetime
-
-        def min_run_start(course):
-            # Course starts may be empty. Since this means the course can't be started, missing course
-            # start date is equivalent to (offset-aware) datetime.datetime.max.
-            max_datetime = datetime.datetime.max.replace(tzinfo=pytz.UTC)
-
-            _course_runs = [course_run for course_run in course_runs if course_run.course == course]
-
-            # Return early if we have no course runs since min() will fail.
-            if not _course_runs:
-                return max_datetime
-
-            run = min(_course_runs, key=lambda run: run.start or max_datetime)
-
-            return run.start or max_datetime
-
-        courses = list(program.courses.all())
-        courses.sort(key=min_run_enrollment_start)
-        courses.sort(key=min_run_start)
-
-        return courses
 
 
 class ProgramSerializer(MinimalProgramSerializer):

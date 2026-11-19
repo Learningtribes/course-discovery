@@ -6,7 +6,6 @@ import html2text
 import markdown
 from dateutil.parser import parse
 from django.utils.functional import cached_property
-from opaque_keys.edx.keys import CourseKey
 
 from course_discovery.apps.core.api_client.utils import create_api_client
 from course_discovery.apps.core.utils import delete_orphans
@@ -129,27 +128,3 @@ class AbstractDataLoader(metaclass=abc.ABCMeta):
         """ Remove orphaned objects from the database. """
         for model in (Image, Video):
             delete_orphans(model)
-
-    @classmethod
-    def _get_or_create_media(cls, media_type, url):
-        media = None
-
-        if url:
-            media, __ = media_type.objects.get_or_create(src=url)
-
-        return media
-
-    @classmethod
-    def get_or_create_video(cls, url, image_url=None):
-        video = cls._get_or_create_media(Video, url)
-
-        if video:
-            image = cls.get_or_create_image(image_url)
-            video.image = image
-            video.save()
-
-        return video
-
-    @classmethod
-    def get_or_create_image(cls, url):
-        return cls._get_or_create_media(Image, url)
