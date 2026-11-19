@@ -127,15 +127,28 @@ loopback mapping, because discovery runs in its own container.
 
 ## 4. Token type
 
-The platform LMS resolves a `Bearer` token by `sha256(token)` against
-`oauth2_provider.AccessToken.token_checksum`, so the opaque token returned for
-`token_type=Bearer` authenticates while the JWT returned for `token_type=JWT` is rejected
-with `token_nonexistent`. `course_discovery/settings/py313.py` therefore sets
-`COURSES_API['TOKEN_TYPE'] = 'Bearer'`; the command default stays `JWT` so no other
-deployment changes behaviour.
+Both credentials authenticate; each has to be sent back under its own header prefix. The
+platform LMS resolves a `Bearer` token by `sha256(token)` against
+`oauth2_provider.AccessToken.token_checksum`, and a JWT by its signature, so a JWT sent as
+`Bearer` answers `401 token_nonexistent` and a Bearer sent as `JWT` answers `401 Invalid token.`
+Measured against the py3.13 LMS: the four token/prefix pairs separate cleanly into the two
+matching ones (200) and the two crossed ones (401).
 
-`course_metadata/views.py` still requests a JWT because it decodes the token to read
-`preferred_username`, so that single-course refresh path is not aligned yet.
+`course_discovery/settings/py313.py` sets `COURSES_API['TOKEN_TYPE'] = 'JWT'`, matching what
+production resolves to: production reads `COURSES_API` from `discovery.auth.json`, which carries
+no `TOKEN_TYPE` key, so `refresh_course_metadata` falls back to `JWT` — the same value
+`lt-master` hardcodes. `DISCOVERY_COURSES_API_TOKEN_TYPE=Bearer` selects the opaque path for a
+local experiment. The management command upper-cases the value before comparing it, so a
+lower-case override cannot silently skip the `preferred_username` claim.
+
+## 4a. Local-only guard
+
+`settings.py313` enables `DEBUG`, sets `ALLOWED_HOSTS = ['*']` and can fall back to the JWT
+secret `discovery-py313-jwt-secret-key`, which is published in this repository. Measured before
+the guard: a token forged with that string was accepted with `administrator=True`. The module
+therefore refuses to import unless `DISCOVERY_LOCAL_RUN=1`, and the Devstack replay writes that
+into the container environment. Anything shared or deployed must use
+`course_discovery.settings.production` instead.
 
 ## 5. Production settings (`course_discovery.settings.production`)
 
