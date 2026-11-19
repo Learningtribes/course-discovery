@@ -23,7 +23,7 @@ class AuthBackendSettingsTests(TestCase):
 
 class JwtHeaderPrefixTests(TestCase):
     def test_base_settings_declare_the_prefix_the_platform_sends(self):
-        """Production and every other settings module inherit it from base; drf-jwt would otherwise default to 'Bearer'."""
+        """Every settings module inherits it from base; drf-jwt would otherwise default to 'Bearer'."""
         base = importlib.import_module('course_discovery.settings.base')
         self.assertEqual(base.JWT_AUTH['JWT_AUTH_HEADER_PREFIX'], 'JWT')
 
