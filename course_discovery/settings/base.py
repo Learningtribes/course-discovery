@@ -588,6 +588,9 @@ JWT_AUTH = {
     'JWT_ISSUER': 'course-discovery',
     'JWT_DECODE_HANDLER': 'edx_rest_framework_extensions.utils.jwt_decode_handler',
     'JWT_VERIFY_AUDIENCE': False,
+    # drf-jwt 1.19.x (pulled in by edx-drf-extensions) defaults to 'Bearer'; the platform sends 'JWT <token>'
+    # (SuppliedJwtAuth). Without this every platform-signed JWT request is rejected with 403.
+    'JWT_AUTH_HEADER_PREFIX': 'JWT',
 }
 
 SWAGGER_SETTINGS = {

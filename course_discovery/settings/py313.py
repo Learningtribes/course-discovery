@@ -55,10 +55,6 @@ if _lms_jwt_secret:
 else:
     # Self-signed fallback (phase 4a behaviour) for a standalone discovery.
     JWT_AUTH['JWT_SECRET_KEY'] = os.environ.get('DISCOVERY_JWT_SECRET_KEY', 'discovery-py313-jwt-secret-key')
-# drf-jwt's default header prefix changed from 'JWT' to 'Bearer' in the fork that
-# edx-drf-extensions 10.6.0 pins. The platform still signs/sends with 'JWT'
-# (SuppliedJwtAuth -> 'JWT {token}'), so restore the prefix here.
-JWT_AUTH['JWT_AUTH_HEADER_PREFIX'] = 'JWT'
 
 # Courses API: discovery fetches course metadata from the platform LMS via OAuth2
 # client-credentials. OIDC_KEY/OIDC_SECRET identify the DOT application this run
