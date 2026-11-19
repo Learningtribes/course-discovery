@@ -150,7 +150,7 @@ edx-django-utils==8.2.0
     #   edx-drf-extensions
     #   edx-rest-api-client
     #   edx-toggles
-edx-drf-extensions @ file:///workspace/ci/py313/companions/artifacts/edx_drf_extensions-10.6.0+hawthorn.1.tar.gz
+edx-drf-extensions @ file://@COMPANIONS_DIR@/edx_drf_extensions-10.6.0+hawthorn.1.tar.gz
     # via -r requirements/py313/base.in
 edx-opaque-keys==4.0.0
     # via

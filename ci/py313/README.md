@@ -18,6 +18,23 @@ The application is deliberately **absent**. `requirements/py313/local.txt` is in
 run time into an isolated venv inside the container, so changing application code or a lock
 entry never requires rebuilding this image.
 
+That lock names its one non-PyPI input, the patched `edx-drf-extensions` sdist, with the
+`@COMPANIONS_DIR@` placeholder instead of an absolute directory, so the same lock is valid
+wherever the repository was checked out. `ci/py313/materialize-lock.py` resolves the
+placeholder and writes the installable copy:
+
+```sh
+python ci/py313/materialize-lock.py requirements/py313/local.txt \
+    --companions-dir "$PWD/ci/py313/companions/artifacts" \
+    --output-dir /tmp/discovery-lock
+uv pip install --python <venv>/bin/python -r /tmp/discovery-lock/local.txt
+```
+
+The script checks the archive against `ci/py313/companions/manifest.json` and refuses to
+write a lock when the digest does not match, so an installer can never be pointed at bytes
+nobody reviewed. The Devstack replay runs exactly this step
+(`discovery.py install`, evidence label `install-discovery-lock`).
+
 Build it locally with the Devstack entry point, which is the supported path:
 
 ```sh
