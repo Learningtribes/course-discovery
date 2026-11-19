@@ -169,9 +169,9 @@ class CoursesApiDataLoaderTests(ApiClientTestMixin, DataLoaderTestMixin, TestCas
 class ApiClientTokenTypeTests(DataLoaderTestMixin, TestCase):
     """`COURSES_API['TOKEN_TYPE']` decides which header the LMS sees.
 
-    The platform answers a JWT-authenticated Courses API call and a Bearer-authenticated one
-    differently (opaque tokens carry no claims), so the token type must reach the client
-    exactly as configured rather than being guessed here.
+    Both token types authenticate; the pair has to match. A JWT is sent under `JWT` and an
+    opaque token under `Bearer`, and the LMS rejects the cross combinations, so the token type
+    must reach the client exactly as configured rather than being guessed here.
     """
 
     loader_class = CoursesApiDataLoader
@@ -185,12 +185,13 @@ class ApiClientTokenTypeTests(DataLoaderTestMixin, TestCase):
         return loader.api_client
 
     def test_a_jwt_token_type_sends_a_jwt_header(self):
+        """`JWT` is this fork's default and the type production runs."""
         client = self._client('JWT')
 
         self.assertIsInstance(client._store['session'].auth, SuppliedJwtAuth)  # pylint: disable=protected-access
 
     def test_a_bearer_token_type_sends_a_bearer_header(self):
-        """This fork's `COURSES_API['TOKEN_TYPE']` is `Bearer`, so this is the production path."""
+        """The `DISCOVERY_COURSES_API_TOKEN_TYPE` override, for exercising the opaque path."""
         client = self._client('Bearer')
 
         auth = client._store['session'].auth  # pylint: disable=protected-access

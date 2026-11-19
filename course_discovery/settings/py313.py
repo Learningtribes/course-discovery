@@ -79,12 +79,17 @@ COURSES_API = {
     'OIDC_KEY': _required('DISCOVERY_OIDC_KEY'),
     'OIDC_SECRET': _required('DISCOVERY_OIDC_SECRET'),
     'IS_SECURE': False,
-    # The platform's `OAuth2Authentication` resolves a Bearer token by
-    # sha256(token) against `oauth2_provider.AccessToken.token_checksum`, so the opaque
-    # token a `token_type=Bearer` request returns authenticates, while the JWT a
-    # `token_type=JWT` request returns is rejected with `token_nonexistent`. Verified
-    # against the py3.13 LMS: Bearer -> 200 with the course list, JWT -> 401.
-    'TOKEN_TYPE': os.environ.get('DISCOVERY_COURSES_API_TOKEN_TYPE', 'Bearer'),
+    # Which credential discovery asks the LMS for. Both work; each has to be sent back under
+    # its own header prefix. `OAuth2Authentication` resolves a Bearer token by sha256(token)
+    # against `oauth2_provider.AccessToken.token_checksum`, and a JWT by its signature, so a
+    # JWT sent as `Bearer` answers `401 token_nonexistent` and a Bearer sent as `JWT` answers
+    # `401 Invalid token.` Verified against the py3.13 LMS: 4/4 combinations pair up as above.
+    #
+    # JWT is the default because that is what production runs. Production reads `COURSES_API`
+    # from discovery.auth.json, which has no TOKEN_TYPE key, so `refresh_course_metadata`
+    # falls back to JWT -- the same value lt-master hardcodes. Defaulting to Bearer here made
+    # the local environment exercise the one path production never takes.
+    'TOKEN_TYPE': os.environ.get('DISCOVERY_COURSES_API_TOKEN_TYPE', 'JWT'),
 }
 
 # Avoid the deleted haystack signal processor still referenced by shared/test.py.
