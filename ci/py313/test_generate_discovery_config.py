@@ -156,3 +156,86 @@ def test_main_refuses_to_overwrite_the_source_in_place(gen, tmp_path, monkeypatc
     monkeypatch.setattr('sys.argv', ['x', '--source', str(source), '--out', str(source), '--skip-import-check'])
     with pytest.raises(SystemExit, match='must not be the source'):
         gen.main()
+
+
+# The Ansible role still writes the removed `EdXOpenIdConnect` backend's key names, and nothing
+# reads those any more, so a corrected copy that keeps them leaves browser login unconfigured
+# while looking healthy. `EdXOAuth2` is named `edx-oauth2`, so social-auth reads `_OAUTH2_*`.
+
+OIDC_SOURCE = {
+    'SOCIAL_AUTH_EDX_OIDC_KEY': 'oidc-key',
+    'SOCIAL_AUTH_EDX_OIDC_SECRET': 'oidc-secret',
+    'SOCIAL_AUTH_EDX_OIDC_URL_ROOT': 'https://lms.example.com',
+    'SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL': 'https://lms.example.com/logout',
+    'SOCIAL_AUTH_EDX_OIDC_ID_TOKEN_DECRYPTION_KEY': 'oidc-secret',
+}
+
+OIDC_RENAMES = {
+    'SOCIAL_AUTH_EDX_OIDC_KEY': 'SOCIAL_AUTH_EDX_OAUTH2_KEY',
+    'SOCIAL_AUTH_EDX_OIDC_SECRET': 'SOCIAL_AUTH_EDX_OAUTH2_SECRET',
+    'SOCIAL_AUTH_EDX_OIDC_URL_ROOT': 'SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT',
+    'SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL': 'SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_URL',
+}
+
+
+@pytest.mark.parametrize('old,new', sorted(OIDC_RENAMES.items()))
+def test_each_credential_moves_onto_the_prefix_the_backend_reads(gen, old, new):
+    result = gen.apply_oauth2_backend(dict(OIDC_SOURCE))
+
+    assert old not in result
+    assert result[new] == OIDC_SOURCE[old]
+
+
+def test_the_id_token_decryption_key_is_dropped_not_renamed(gen):
+    """It fed the removed backend's ID-token decryption; the OAuth2 backend has no equivalent."""
+    result = gen.apply_oauth2_backend(dict(OIDC_SOURCE))
+
+    assert not [key for key in result if 'ID_TOKEN_DECRYPTION' in key]
+
+
+def test_a_value_already_under_the_new_name_is_not_overwritten(gen):
+    """Re-running over an already-corrected file must not put a stale value back."""
+    source = dict(OIDC_SOURCE, SOCIAL_AUTH_EDX_OAUTH2_KEY='newer-key')
+
+    result = gen.apply_oauth2_backend(source)
+
+    assert result['SOCIAL_AUTH_EDX_OAUTH2_KEY'] == 'newer-key'
+    assert 'SOCIAL_AUTH_EDX_OIDC_KEY' not in result
+
+
+def test_a_file_with_no_social_auth_keys_is_untouched(gen):
+    result = gen.apply_oauth2_backend({'SECRET_KEY': 'secret'})
+
+    assert result == {'SECRET_KEY': 'secret'}
+
+
+def test_validate_rejects_a_leftover_oidc_key(gen):
+    """It would be ignored silently, so writing it out would look like a fix that is not one."""
+    with pytest.raises(SystemExit, match='ignored by the EdXOAuth2 backend'):
+        gen.validate_oauth2({'SOCIAL_AUTH_EDX_OIDC_KEY': 'k'})
+
+
+def test_validate_rejects_a_key_without_a_url_root(gen):
+    """Without URL_ROOT the login redirect has no LMS to point at."""
+    with pytest.raises(SystemExit, match='URL_ROOT'):
+        gen.validate_oauth2({'SOCIAL_AUTH_EDX_OAUTH2_KEY': 'k'})
+
+
+def test_a_full_run_renames_the_keys_in_the_written_file(gen, tmp_path, monkeypatch):
+    """End to end: what the service reads is the generator's output, not the Ansible file."""
+    monkeypatch.setenv('DISCOVERY_SECRET_KEY', 'secret')
+    out = tmp_path / 'discovery.yml'
+    source = tmp_path / 'source.yml'
+    source.write_text(yaml.safe_dump(dict(
+        ANSIBLE_OUTPUT,
+        **{'SOCIAL_AUTH_EDX_OIDC_KEY': 'oidc-key',
+           'SOCIAL_AUTH_EDX_OIDC_SECRET': 'oidc-secret',
+           'SOCIAL_AUTH_EDX_OIDC_URL_ROOT': 'https://lms.example.com'}
+    )))
+
+    gen.main(['--source', str(source), '--out', str(out), '--skip-import-check'])
+
+    written = yaml.safe_load(out.read_text())
+    assert written['SOCIAL_AUTH_EDX_OAUTH2_KEY'] == 'oidc-key'
+    assert written['SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT'] == 'https://lms.example.com'
+    assert not [key for key in written if key.startswith('SOCIAL_AUTH_EDX_OIDC_')]

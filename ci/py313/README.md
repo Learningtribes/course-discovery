@@ -219,6 +219,41 @@ because it needs no change to the `configuration` repository, keeps this reposit
 branch self-sufficient, and leaves a clean rollback: point `DISCOVERY_CFG` back at
 `/edx/etc/discovery.yml`.
 
+### Browser login keys must change for the EdXOAuth2 backend
+
+`AUTHENTICATION_BACKENDS` names `auth_backends.backends.EdXOAuth2`, and that backend declares
+`name = 'edx-oauth2'`. social-auth derives its settings prefix from that name, so it reads
+`SOCIAL_AUTH_EDX_OAUTH2_KEY` / `_SECRET` / `_URL_ROOT` (and optionally `_LOGOUT_URL`). The
+`EdXOpenIdConnect` backend that read `SOCIAL_AUTH_EDX_OIDC_*` is gone, and those keys are now
+ignored.
+
+The Ansible role still writes the old names, so a `discovery.yml` carried over from the
+Django 1.11 deployment configures nothing: browser login to `/admin` and the discovery UI fails
+while JWT and Bearer API traffic keeps working, which makes the failure easy to miss.
+`generate_discovery_config.py` renames the keys in the copy it writes, so the file the service
+actually reads (`$DISCOVERY_CFG`) carries the names the backend looks for:
+
+| Ansible writes | The backend reads |
+| --- | --- |
+| `SOCIAL_AUTH_EDX_OIDC_KEY` | `SOCIAL_AUTH_EDX_OAUTH2_KEY` |
+| `SOCIAL_AUTH_EDX_OIDC_SECRET` | `SOCIAL_AUTH_EDX_OAUTH2_SECRET` |
+| `SOCIAL_AUTH_EDX_OIDC_URL_ROOT` | `SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT` |
+| `SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL` | `SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_URL` |
+| `SOCIAL_AUTH_EDX_OIDC_ID_TOKEN_DECRYPTION_KEY` | dropped — the OAuth2 backend has no equivalent |
+
+The generator refuses to write a file that still carries a `SOCIAL_AUTH_EDX_OIDC_*` key, or an
+`_OAUTH2_KEY` with no `_URL_ROOT` to redirect to. Values are moved as-is and a key already under
+the new name wins, so re-running over an already-corrected file is a no-op rather than a way to
+restore a stale value.
+
+`DISCOVERY_SOCIAL_AUTH_EDX_OAUTH2_*` are also present in
+`hawthorn_inventory/group_vars/tenants/discovery-vars.yml`, next to the old names the role still
+maps, so a role update has the data it needs without an inventory change at the same time.
+
+A login smoke test against a py3.13 LMS is still required before cutover: the generator proves
+the keys are spelled correctly, not that the OAuth2 application behind them is registered.
+
+
 The `KEY_PREFIX` change is not cosmetic. `drf-extensions` pickles whole API responses into
 the cache, so a key written by the python-memcached era cannot be unpickled by the new code —
 that is a deserialisation error, not a cache miss (§2.4 of the upgrade plan).

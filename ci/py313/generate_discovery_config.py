@@ -61,6 +61,21 @@ DEFAULT_MEMCACHE_PORT = '11211'
 # Set by `production.py` to build DATABASES; a YAML without it is useless.
 REQUIRED_KEYS = ('SECRET_KEY',)
 
+# `AUTHENTICATION_BACKENDS` names `auth_backends.backends.EdXOAuth2`. social-auth derives the
+# settings prefix from the backend's `name = 'edx-oauth2'`, so it reads `SOCIAL_AUTH_EDX_OAUTH2_*`.
+# The Ansible role that writes this YAML still emits the keys of the removed `EdXOpenIdConnect`
+# backend, which nothing reads now, so a corrected copy that keeps those names leaves browser
+# login unconfigured while looking perfectly healthy.
+OAUTH2_RENAMES = {
+    'SOCIAL_AUTH_EDX_OIDC_KEY': 'SOCIAL_AUTH_EDX_OAUTH2_KEY',
+    'SOCIAL_AUTH_EDX_OIDC_SECRET': 'SOCIAL_AUTH_EDX_OAUTH2_SECRET',
+    'SOCIAL_AUTH_EDX_OIDC_URL_ROOT': 'SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT',
+    'SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL': 'SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_URL',
+}
+# Dropped rather than renamed: it only fed the removed backend's ID-token decryption, and the
+# OAuth2 backend has no equivalent. Carrying it forward would suggest it still has an effect.
+OAUTH2_DROPPED = ('SOCIAL_AUTH_EDX_OIDC_ID_TOKEN_DECRYPTION_KEY',)
+
 
 def fail(message):
     raise SystemExit('generate_discovery_config: ' + message)
@@ -132,6 +147,35 @@ def apply_django52(config):
     return config
 
 
+def apply_oauth2_backend(config):
+    """Move the backend's credential keys onto the prefix `EdXOAuth2` actually reads.
+
+    Values are moved as-is; nothing here reads, prints or validates a secret. A key that is
+    already spelled the new way wins, so re-running over an already-corrected file is a no-op
+    rather than a way to clobber a newer value with a stale one.
+    """
+    for old, new in OAUTH2_RENAMES.items():
+        if old not in config:
+            continue
+        if new not in config:
+            config[new] = config[old]
+        del config[old]
+    for dropped in OAUTH2_DROPPED:
+        config.pop(dropped, None)
+    return config
+
+
+def validate_oauth2(config):
+    """A leftover `SOCIAL_AUTH_EDX_OIDC_*` key would be silently ignored, so refuse to write one."""
+    leftover = sorted(key for key in config if key.startswith('SOCIAL_AUTH_EDX_OIDC_'))
+    if leftover:
+        fail('these keys are ignored by the EdXOAuth2 backend: ' + ', '.join(leftover))
+    if config.get('SOCIAL_AUTH_EDX_OAUTH2_KEY') and not config.get('SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT'):
+        fail('SOCIAL_AUTH_EDX_OAUTH2_KEY is set but SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT is not; '
+             'browser login would have no LMS to redirect to')
+    return config
+
+
 def validate(config, check_imports=True):
     """Refuse to write a file that cannot start: a wrong backend only surfaces at django.setup()."""
     missing = [key for key in REQUIRED_KEYS if not config.get(key)]
@@ -199,6 +243,7 @@ def main(argv=None):
             fail('--out must not be the source file; the corrected copy replaces it via DISCOVERY_CFG')
 
     config = validate(apply_django52(config), check_imports=not args.skip_import_check)
+    config = validate_oauth2(apply_oauth2_backend(config))
 
     if args.dry_run:
         print('Would write %s with keys: %s' % (args.out, ', '.join(sorted(config))))
