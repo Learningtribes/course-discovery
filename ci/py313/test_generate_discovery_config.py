@@ -166,6 +166,7 @@ OIDC_SOURCE = {
     'SOCIAL_AUTH_EDX_OIDC_KEY': 'oidc-key',
     'SOCIAL_AUTH_EDX_OIDC_SECRET': 'oidc-secret',
     'SOCIAL_AUTH_EDX_OIDC_URL_ROOT': 'https://lms.example.com',
+    'SOCIAL_AUTH_EDX_OIDC_PUBLIC_URL_ROOT': 'https://lms.example.com',
     'SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL': 'https://lms.example.com/logout',
     'SOCIAL_AUTH_EDX_OIDC_ID_TOKEN_DECRYPTION_KEY': 'oidc-secret',
 }
@@ -174,7 +175,8 @@ OIDC_RENAMES = {
     'SOCIAL_AUTH_EDX_OIDC_KEY': 'SOCIAL_AUTH_EDX_OAUTH2_KEY',
     'SOCIAL_AUTH_EDX_OIDC_SECRET': 'SOCIAL_AUTH_EDX_OAUTH2_SECRET',
     'SOCIAL_AUTH_EDX_OIDC_URL_ROOT': 'SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT',
-    'SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL': 'SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_URL',
+    'SOCIAL_AUTH_EDX_OIDC_PUBLIC_URL_ROOT': 'SOCIAL_AUTH_EDX_OAUTH2_PUBLIC_URL_ROOT',
+    'SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL': 'SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_REDIRECT_URL',
 }
 
 
@@ -252,3 +254,43 @@ def test_a_full_run_renames_the_keys_in_the_written_file(gen, tmp_path, monkeypa
     assert written['SOCIAL_AUTH_EDX_OAUTH2_KEY'] == 'oidc-key'
     assert written['SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT'] == 'https://lms.example.com'
     assert not [key for key in written if key.startswith('SOCIAL_AUTH_EDX_OIDC_')]
+
+
+# `EdXOAuth2.authorization_url()` is `f'{url_root}/oauth2/authorize'`, so a URL_ROOT that already
+# ends at the OAuth2 mount point yields `/oauth2/oauth2/authorize`. The removed backend expected
+# the mount point to be included (`.../oauth`), so a carried-over value is not safe to copy.
+
+@pytest.mark.parametrize('raw,expected', [
+    ('https://lms.example.com', 'https://lms.example.com'),
+    ('https://lms.example.com/oauth2', 'https://lms.example.com'),
+    ('https://lms.example.com/oauth2/', 'https://lms.example.com'),
+    ('https://lms.example.com/oauth', 'https://lms.example.com'),
+    ('https://lms.example.com/some/prefix', 'https://lms.example.com/some/prefix'),
+])
+def test_a_trailing_oauth2_mount_is_removed(gen, raw, expected):
+    assert gen.strip_oauth2_mount(raw) == expected
+
+
+def test_the_carried_over_url_root_loses_its_mount_point(gen):
+    """The staging Ansible file is in the old convention, so this is the real-world case."""
+    result = gen.apply_oauth2_backend(dict(
+        OIDC_SOURCE, SOCIAL_AUTH_EDX_OIDC_URL_ROOT='https://lms.example.com/oauth2'))
+
+    assert result['SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT'] == 'https://lms.example.com'
+
+
+def test_public_url_root_is_kept_not_dropped(gen):
+    """The backend prefers it over URL_ROOT for the redirect, so dropping it changes behaviour."""
+    result = gen.apply_oauth2_backend(dict(
+        OIDC_SOURCE, SOCIAL_AUTH_EDX_OIDC_PUBLIC_URL_ROOT='https://public.example.com/oauth2'))
+
+    assert result['SOCIAL_AUTH_EDX_OAUTH2_PUBLIC_URL_ROOT'] == 'https://public.example.com'
+
+
+def test_logout_goes_to_the_setting_the_backend_reads(gen):
+    """`EdXOAuth2` has no `LOGOUT_URL`; it reads `LOGOUT_REDIRECT_URL`."""
+    result = gen.apply_oauth2_backend(dict(OIDC_SOURCE))
+
+    assert 'SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_URL' not in result
+    assert result['SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_REDIRECT_URL'] == OIDC_SOURCE[
+        'SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL']

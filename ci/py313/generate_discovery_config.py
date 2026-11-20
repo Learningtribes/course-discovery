@@ -70,11 +70,24 @@ OAUTH2_RENAMES = {
     'SOCIAL_AUTH_EDX_OIDC_KEY': 'SOCIAL_AUTH_EDX_OAUTH2_KEY',
     'SOCIAL_AUTH_EDX_OIDC_SECRET': 'SOCIAL_AUTH_EDX_OAUTH2_SECRET',
     'SOCIAL_AUTH_EDX_OIDC_URL_ROOT': 'SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT',
-    'SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL': 'SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_URL',
+    # The backend prefers `PUBLIC_URL_ROOT` over `URL_ROOT` for the login redirect, and the
+    # removed backend had no such setting, so an Ansible file may carry either spelling.
+    'SOCIAL_AUTH_EDX_OIDC_PUBLIC_URL_ROOT': 'SOCIAL_AUTH_EDX_OAUTH2_PUBLIC_URL_ROOT',
+    # The backend reads `LOGOUT_REDIRECT_URL`; it has no `LOGOUT_URL` setting at all, so mapping
+    # onto `_OAUTH2_LOGOUT_URL` would write a key nothing reads.
+    'SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL': 'SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_REDIRECT_URL',
 }
+# Already spelled the way the backend reads it, so only the prefix changes. Kept out of
+# `OAUTH2_RENAMES` because the source name is not an `_OIDC_` key.
+OAUTH2_PUBLIC_URL_ROOT = 'SOCIAL_AUTH_EDX_OAUTH2_PUBLIC_URL_ROOT'
 # Dropped rather than renamed: it only fed the removed backend's ID-token decryption, and the
 # OAuth2 backend has no equivalent. Carrying it forward would suggest it still has an effect.
 OAUTH2_DROPPED = ('SOCIAL_AUTH_EDX_OIDC_ID_TOKEN_DECRYPTION_KEY',)
+# `EdXOAuth2.authorization_url()` returns `f'{url_root}/oauth2/authorize'`, so a URL_ROOT that
+# already ends in the OAuth2 mount point yields `/oauth2/oauth2/authorize`. The removed backend
+# took the opposite convention (`.../oauth`), which is why a carried-over value is not safe to
+# copy verbatim.
+OAUTH2_MOUNT = '/oauth2'
 
 
 def fail(message):
@@ -147,12 +160,29 @@ def apply_django52(config):
     return config
 
 
+def strip_oauth2_mount(url):
+    """Drop a trailing OAuth2 mount point, since the backend appends one itself.
+
+    Idempotent, and leaves any other path alone: `https://lms/oauth2` -> `https://lms`, while
+    `https://lms/some/prefix` is returned unchanged.
+    """
+    if not isinstance(url, str):
+        return url
+    trimmed = url.rstrip('/')
+    for suffix in (OAUTH2_MOUNT, '/oauth'):
+        if trimmed.endswith(suffix):
+            return trimmed[:-len(suffix)] or '/'
+    return url
+
+
 def apply_oauth2_backend(config):
     """Move the backend's credential keys onto the prefix `EdXOAuth2` actually reads.
 
-    Values are moved as-is; nothing here reads, prints or validates a secret. A key that is
-    already spelled the new way wins, so re-running over an already-corrected file is a no-op
-    rather than a way to clobber a newer value with a stale one.
+    Values are moved as-is except `URL_ROOT`, which is normalized: the backend appends
+    `/oauth2`, and the removed backend's convention was to include the mount point, so a
+    verbatim copy would produce `/oauth2/oauth2/authorize`. Nothing here reads, prints or
+    validates a secret. A key already spelled the new way wins, so re-running over a corrected
+    file is a no-op rather than a way to clobber a newer value with a stale one.
     """
     for old, new in OAUTH2_RENAMES.items():
         if old not in config:
@@ -160,6 +190,11 @@ def apply_oauth2_backend(config):
         if new not in config:
             config[new] = config[old]
         del config[old]
+    if OAUTH2_PUBLIC_URL_ROOT in config:
+        config[OAUTH2_PUBLIC_URL_ROOT] = strip_oauth2_mount(config[OAUTH2_PUBLIC_URL_ROOT])
+    if config.get('SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT'):
+        config['SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT'] = strip_oauth2_mount(
+            config['SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT'])
     for dropped in OAUTH2_DROPPED:
         config.pop(dropped, None)
     return config

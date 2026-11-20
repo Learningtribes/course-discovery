@@ -223,9 +223,9 @@ branch self-sufficient, and leaves a clean rollback: point `DISCOVERY_CFG` back 
 
 `AUTHENTICATION_BACKENDS` names `auth_backends.backends.EdXOAuth2`, and that backend declares
 `name = 'edx-oauth2'`. social-auth derives its settings prefix from that name, so it reads
-`SOCIAL_AUTH_EDX_OAUTH2_KEY` / `_SECRET` / `_URL_ROOT` (and optionally `_LOGOUT_URL`). The
-`EdXOpenIdConnect` backend that read `SOCIAL_AUTH_EDX_OIDC_*` is gone, and those keys are now
-ignored.
+`SOCIAL_AUTH_EDX_OAUTH2_KEY` / `_SECRET` / `_URL_ROOT`, plus `_PUBLIC_URL_ROOT` (the
+redirect base) and `_LOGOUT_REDIRECT_URL`. The `EdXOpenIdConnect` backend that read
+`SOCIAL_AUTH_EDX_OIDC_*` is gone, and those keys are now ignored.
 
 The Ansible role still writes the old names, so a `discovery.yml` carried over from the
 Django 1.11 deployment configures nothing: browser login to `/admin` and the discovery UI fails
@@ -238,12 +238,22 @@ actually reads (`$DISCOVERY_CFG`) carries the names the backend looks for:
 | `SOCIAL_AUTH_EDX_OIDC_KEY` | `SOCIAL_AUTH_EDX_OAUTH2_KEY` |
 | `SOCIAL_AUTH_EDX_OIDC_SECRET` | `SOCIAL_AUTH_EDX_OAUTH2_SECRET` |
 | `SOCIAL_AUTH_EDX_OIDC_URL_ROOT` | `SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT` |
-| `SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL` | `SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_URL` |
+| `SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL` | `SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_REDIRECT_URL` |
+| `SOCIAL_AUTH_EDX_OIDC_PUBLIC_URL_ROOT` | `SOCIAL_AUTH_EDX_OAUTH2_PUBLIC_URL_ROOT` |
 | `SOCIAL_AUTH_EDX_OIDC_ID_TOKEN_DECRYPTION_KEY` | dropped — the OAuth2 backend has no equivalent |
 
+The logout key is `_LOGOUT_REDIRECT_URL`, not `_LOGOUT_URL`: `EdXOAuth2` reads
+`self.setting('LOGOUT_REDIRECT_URL')`, so the shorter name would be written and never read.
+
+The two `*_URL_ROOT` values are **normalized**: a trailing `/oauth2` or `/oauth` mount is
+stripped. `EdXOAuth2` builds its endpoints itself -- `f'{url_root}/oauth2/authorize'` and
+`f"{self.setting('URL_ROOT')}/oauth2/access_token"` -- so an Ansible value that already ends in
+`/oauth2` would produce `/oauth2/oauth2/authorize` and `/oauth2/oauth2/access_token`. Stripping
+is safe in both directions: a root without the mount is unchanged.
+
 The generator refuses to write a file whose `_OAUTH2_KEY` has no `_URL_ROOT` to redirect to.
-Values are moved as-is and a key already under the new name wins, so re-running over an
-already-corrected file is a no-op rather than a way to restore a stale value.
+A key already under the new name wins, so re-running over an already-corrected file is a no-op
+rather than a way to restore a stale value.
 
 A `SOCIAL_AUTH_EDX_OIDC_*` key the table above does not cover (an old-backend setting with no
 OAuth2 equivalent) is **reported on stderr and dropped**, not treated as an error: an extra
