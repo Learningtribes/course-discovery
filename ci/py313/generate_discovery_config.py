@@ -46,6 +46,7 @@ import importlib
 import json
 import os
 from pathlib import Path
+import socket
 import sys
 
 import yaml
@@ -226,6 +227,32 @@ def validate_oauth2(config):
     return config
 
 
+def unresolvable_locations(config):
+    """Cache ``LOCATION`` hosts this host cannot resolve, as ``(alias, host)`` pairs.
+
+    Reported, never fatal. The address belongs to the deployment and a generator host can
+    legitimately resolve differently from the service host, so guessing a replacement would
+    be worse than saying nothing. But saying nothing has a cost: ``LOCATION: ['memcache']``
+    copied out of a devstack is unresolvable anywhere else, and the only symptom is a 500
+    from whichever request first touches the cache -- with nothing pointing back at this
+    file. A unix-socket location (``/path``) is not a host and is skipped.
+    """
+    problems = []
+    for alias, entry in sorted((config.get('CACHES') or {}).items()):
+        if not isinstance(entry, dict):
+            continue
+        locations = entry.get('LOCATION')
+        for location in [locations] if isinstance(locations, str) else (locations or []):
+            if not isinstance(location, str) or location.startswith('/'):
+                continue
+            host = (location.rsplit(':', 1)[0] if ':' in location else location).strip('[]')
+            try:
+                socket.getaddrinfo(host, None)
+            except Exception:  # pylint: disable=broad-except
+                problems.append((alias, host))
+    return problems
+
+
 def validate(config, check_imports=True):
     """Refuse to write a file that cannot start: a wrong backend only surfaces at django.setup()."""
     missing = [key for key in REQUIRED_KEYS if not config.get(key)]
@@ -249,6 +276,15 @@ def validate(config, check_imports=True):
             fail('CACHES.%s backend %s is not importable here: %s\n'
                  'Run this script with the service venv (it owns Django), or pass --skip-import-check'
                  % (alias, backend, exc))
+    if check_imports:
+        # Only on the operator path: `--skip-import-check` says this environment cannot answer
+        # runtime questions at all, and a name lookup here would just be noise (or a DNS stall
+        # in CI) rather than a fact about the host that will run the service.
+        for alias, host in unresolvable_locations(config):
+            print('warning: CACHES.%s LOCATION host %r does not resolve here; the first cache '
+                  'access will fail and the request that touched it returns 500. Point it at a '
+                  'reachable memcached, or set DISCOVERY_MEMCACHE to override the address.'
+                  % (alias, host), file=sys.stderr)
     return config
 
 

@@ -6,6 +6,7 @@ tests pin the two properties that fix it: every cache alias stops naming the rem
 """
 import importlib.util
 from pathlib import Path
+import socket
 
 import pytest
 import yaml
@@ -294,3 +295,56 @@ def test_logout_goes_to_the_setting_the_backend_reads(gen):
     assert 'SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_URL' not in result
     assert result['SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_REDIRECT_URL'] == OIDC_SOURCE[
         'SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL']
+
+
+class _AnyModule:
+    """Stands in for Django: every attribute the backend check looks for exists."""
+
+    def __getattr__(self, name):
+        return object()
+
+
+def _importable_anything(name):
+    return _AnyModule()
+
+
+def test_an_unresolvable_cache_host_is_reported_but_not_fatal(gen, monkeypatch, capsys):
+    """`LOCATION: ['memcache']` out of a devstack 500s on the first cache access, nowhere near here."""
+    def unresolvable(host, *args, **kwargs):
+        raise socket.gaierror('Name or service not known')
+
+    monkeypatch.setattr(gen.socket, 'getaddrinfo', unresolvable)
+    # This suite has no Django; the backend import check is not what is under test here.
+    monkeypatch.setattr(gen.importlib, 'import_module', _importable_anything)
+    config = {'SECRET_KEY': 'x',
+              'CACHES': {'default': {'BACKEND': gen.DEFAULT_CACHE_BACKEND,
+                                     'LOCATION': ['memcache']}}}
+
+    gen.validate(config, check_imports=True)
+
+    err = capsys.readouterr().err
+    assert 'memcache' in err and 'DISCOVERY_MEMCACHE' in err
+
+
+def test_a_resolvable_cache_host_says_nothing(gen, monkeypatch, capsys):
+    monkeypatch.setattr(gen.socket, 'getaddrinfo', lambda host, *a, **k: [(2, 1, 6, '', (host, 0))])
+    monkeypatch.setattr(gen.importlib, 'import_module', _importable_anything)
+    config = {'SECRET_KEY': 'x',
+              'CACHES': {'default': {'BACKEND': gen.DEFAULT_CACHE_BACKEND,
+                                     'LOCATION': ['cache.internal:11211']}}}
+
+    gen.validate(config, check_imports=True)
+
+    assert 'warning' not in capsys.readouterr().err
+
+
+def test_a_unix_socket_cache_location_is_not_a_host(gen, monkeypatch):
+    """PyMemcacheCache accepts a socket path; resolving it as a hostname would be nonsense."""
+    def explode(*args, **kwargs):
+        raise AssertionError('getaddrinfo must not be called for a socket path')
+
+    monkeypatch.setattr(gen.socket, 'getaddrinfo', explode)
+    config = {'CACHES': {'default': {'BACKEND': gen.DEFAULT_CACHE_BACKEND,
+                                     'LOCATION': ['/var/run/memcached.sock']}}}
+
+    assert gen.unresolvable_locations(config) == []

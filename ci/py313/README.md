@@ -211,6 +211,16 @@ something first reads it), sets `KEY_PREFIX: discovery-py313`, derives
 the source file — this repository does not own the deployment's Elasticsearch URL, e-mail
 host or partner id, so it must not rewrite them.
 
+**The `LOCATION` address is preserved, and checked.** It belongs to the deployment, so the
+generator never invents one. It does resolve each host and prints a warning when one does not
+answer, because the failure it leaves behind is not local to this file: a `LOCATION:
+['memcache']` copied out of a devstack resolves nowhere else, `django.setup()` still
+succeeds (pymemcache connects lazily), and the first request that touches the cache returns
+500 with nothing pointing back here. The warning names `DISCOVERY_MEMCACHE` (already
+supported by `cache_locations`) as the override. It is a warning and not a failure on
+purpose: the generator may legitimately run on a host whose name resolution differs from the
+service host, and blocking a deployment over that would be worse than saying it once.
+
 **Why a generated copy instead of an Ansible change.** The Platform hit the same wall and
 solved it the same way: `platform/ci/py313/bringup/generate_aws_config.py` writes
 `lms.env.json` / `cms.env.json` into a Platform-owned directory and the service is pointed at
