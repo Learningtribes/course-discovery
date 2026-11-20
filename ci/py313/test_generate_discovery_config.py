@@ -267,9 +267,28 @@ def test_a_full_run_renames_the_keys_in_the_written_file(gen, tmp_path, monkeypa
     ('https://lms.example.com/oauth2/', 'https://lms.example.com'),
     ('https://lms.example.com/oauth', 'https://lms.example.com'),
     ('https://lms.example.com/some/prefix', 'https://lms.example.com/some/prefix'),
+    # A host whose name is itself `oauth` ends with the same six characters as the mount point.
+    # Matching the whole string cut the origin down to `https:/`.
+    ('https://oauth', 'https://oauth'),
+    ('http://oauth', 'http://oauth'),
+    ('https://oauth/', 'https://oauth/'),
+    ('https://oauth:8443', 'https://oauth:8443'),
+    ('https://oauth.localhost', 'https://oauth.localhost'),
+    ('http://oauth/oauth2', 'http://oauth'),
+    # A path that merely contains the mount point is not a mount point.
+    ('https://lms.example.com/myoauth', 'https://lms.example.com/myoauth'),
+    ('https://lms.example.com/oauth2x', 'https://lms.example.com/oauth2x'),
 ])
 def test_a_trailing_oauth2_mount_is_removed(gen, raw, expected):
     assert gen.strip_oauth2_mount(raw) == expected
+
+
+def test_stripping_the_mount_never_touches_the_host(gen):
+    """Removing a mount point must not be able to corrupt the origin it is attached to."""
+    for host in ('oauth', 'lms', 'lms.example.com', 'oauth.example.com'):
+        for mount in ('', '/oauth2', '/oauth'):
+            raw = 'https://%s%s' % (host, mount)
+            assert gen.strip_oauth2_mount(raw).startswith('https://' + host), raw
 
 
 def test_the_carried_over_url_root_loses_its_mount_point(gen):

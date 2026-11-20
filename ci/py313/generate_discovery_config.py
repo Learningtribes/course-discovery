@@ -48,6 +48,7 @@ import os
 from pathlib import Path
 import socket
 import sys
+from urllib.parse import urlsplit, urlunsplit
 
 import yaml
 
@@ -166,14 +167,27 @@ def strip_oauth2_mount(url):
 
     Idempotent, and leaves any other path alone: `https://lms/oauth2` -> `https://lms`, while
     `https://lms/some/prefix` is returned unchanged.
+
+    The suffix is matched against the **path only**, never the whole string: a deployment whose
+    LMS host is literally named `oauth` produces `https://oauth`, whose last six characters are
+    also `/oauth`, and cutting there left `https:/` -- a URL the backend cannot build anything
+    from. Parsing first keeps the netloc out of reach.
     """
     if not isinstance(url, str):
         return url
-    trimmed = url.rstrip('/')
+    parts = urlsplit(url)
+    path = parts.path.rstrip('/')
     for suffix in (OAUTH2_MOUNT, '/oauth'):
-        if trimmed.endswith(suffix):
-            return trimmed[:-len(suffix)] or '/'
-    return url
+        if path.endswith(suffix):
+            path = path[:-len(suffix)]
+            break
+    else:
+        return url
+    if not path:
+        # A relative `URL_ROOT` (`/oauth2`) would otherwise become the empty string; an absolute
+        # one keeps its bare origin, which is what the backend wants.
+        path = '' if parts.netloc else '/'
+    return urlunsplit((parts.scheme, parts.netloc, path, parts.query, parts.fragment))
 
 
 def apply_oauth2_backend(config):
