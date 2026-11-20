@@ -445,10 +445,19 @@ SOCIAL_AUTH_STRATEGY = 'auth_backends.strategies.EdxDjangoStrategy'
 # The `EdXOAuth2` backend is named `edx-oauth2`, so social-auth reads `SOCIAL_AUTH_EDX_OAUTH2_*`.
 # The former `SOCIAL_AUTH_EDX_OIDC_*` keys (and the ID token decryption key) belong to the removed
 # `EdXOpenIdConnect` backend and are ignored. Set these to the values of your LMS OAuth2 provider.
+#
+# `URL_ROOT` carries no `/oauth2` suffix: the backend appends `/oauth2/authorize` and
+# `/oauth2/access_token` itself, so a root that already ends in the mount produces
+# `/oauth2/oauth2/...`.
 SOCIAL_AUTH_EDX_OAUTH2_KEY = 'replace-me'
 SOCIAL_AUTH_EDX_OAUTH2_SECRET = 'replace-me'
 SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT = 'replace-me'
-SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_URL = 'replace-me'
+# The backend reads `LOGOUT_REDIRECT_URL`, not `LOGOUT_URL`; a `LOGOUT_URL` here would be written
+# and never read. An unset value means the backend returns the LMS end-session URL unchanged, so
+# the default is empty rather than a placeholder that would be used as a real redirect target.
+# `PUBLIC_URL_ROOT` is the redirect base and falls back to `URL_ROOT` when unset.
+SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_REDIRECT_URL = ''
+SOCIAL_AUTH_EDX_OAUTH2_PUBLIC_URL_ROOT = ''
 
 # Request the user's permissions in the ID token
 EXTRA_SCOPE = ['permissions']

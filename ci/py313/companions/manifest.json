@@ -1,0 +1,124 @@
+{
+  "format": 1,
+  "note": "Companion sdists discovery installs by path. Recorded here so the archive identity is reviewable and reproducible; the platform manifest carries the same record and the archive bytes are identical. Regenerate with ci/py313/rebuild-companions.py.",
+  "packages": [
+    {
+      "artifact": "edx_drf_extensions-10.6.0+hawthorn.1.tar.gz",
+      "base_line": "/runtime/delivery-sources/edx_drf_extensions-10.6.0",
+      "changed_files": {
+        "PKG-INFO": {
+          "after": "fde67e3c5089434025f73c1108f1c5ba60f3789ab4dcc984492386ee8a8fd3cf",
+          "before": "e5cc9fb32a37dea2e3cb37ea0e5ef4cce6fd8dce6d1e193468effda0300b877c"
+        },
+        "edx_drf_extensions.egg-info/PKG-INFO": {
+          "after": "fde67e3c5089434025f73c1108f1c5ba60f3789ab4dcc984492386ee8a8fd3cf",
+          "before": "e5cc9fb32a37dea2e3cb37ea0e5ef4cce6fd8dce6d1e193468effda0300b877c"
+        },
+        "edx_rest_framework_extensions/__init__.py": {
+          "after": "aa638570473e994665ec95662615d548f42ef8ad92c6fedeae128a4290a40862",
+          "before": "901dbfd7c805e99a83b0a2c68aaf317143ec239ff3eebce2da58aca5b7a6eabe"
+        },
+        "edx_rest_framework_extensions/auth/jwt/decoder.py": {
+          "after": "4e133620d60b7bc5212f157d92696b65aca60f342f9235ccd6b6431afcde3572",
+          "before": "e23568e3fa12287ad87fb145cf31a564d4cf3faa0429d7e07e7c97649e84e509"
+        },
+        "setup.py": {
+          "after": "46956eb55ef798b7158d761aeb3b08256b5b98f1960f8c4e5c4ae33233732877",
+          "before": "d992a4518111cc597f056d64fe576fb2aadf82d2b6f9ca5dc4d219afeb895dfd"
+        }
+      },
+      "contract_file": "edx_rest_framework_extensions/auth/jwt/decoder.py",
+      "files": {
+        "CHANGELOG.rst": "1995b091dd86fa8898180e0e3fab186d47e420b0e56f53afc182771f927ad874",
+        "LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "MANIFEST.in": "25d97220a5ab2479e287ce5b9cc1235a259195b942cdb925d93548fa962aa44d",
+        "PKG-INFO": "fde67e3c5089434025f73c1108f1c5ba60f3789ab4dcc984492386ee8a8fd3cf",
+        "README.rst": "62e11e2ee4243591a7402134ea7d34da1664e2f11e74ae136c74921af69a05b2",
+        "csrf/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "csrf/api/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "csrf/api/urls.py": "f55257d763bda498f47737a2ee0abef14e79d518fb4b16c412a6c437fdeff65f",
+        "csrf/api/v1/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "csrf/api/v1/urls.py": "4d0ef8c4b27235951d5abac666667b9493b25b2e60b73a12c50286aeacd3b4ab",
+        "csrf/api/v1/views.py": "0644a5fc428d5f0eafcc1748179143b06646ccb9fa1e0d29003e598117579cb0",
+        "csrf/apps.py": "f7705897453771d737bb1ca635240e712ce9c5ce10893ee635952ea98de22286",
+        "csrf/tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "csrf/tests/test_api.py": "e94a99cda733332cd00e2963a88cad06c2e845051881e3242f0807d0c0fb556f",
+        "csrf/urls.py": "0cf3591a9a402d6e1344c43a05891d534fe5a34aa21d63ca396063a0852f3b25",
+        "docs/__init__.py": "859832edbe0d9334db38fa24f3ffbd6a0f51cc7acbb9417b84ca7fb6b81ef81f",
+        "docs/conf.py": "df004aeedc1915972874210f2246b3f204ee596f7450bd11a5173860927f38d5",
+        "edx_drf_extensions.egg-info/PKG-INFO": "fde67e3c5089434025f73c1108f1c5ba60f3789ab4dcc984492386ee8a8fd3cf",
+        "edx_drf_extensions.egg-info/SOURCES.txt": "eb923695c6138f31b35ec3498f3a591c09cfe273c9beca4a08bc5d6777772ced",
+        "edx_drf_extensions.egg-info/dependency_links.txt": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+        "edx_drf_extensions.egg-info/requires.txt": "9e8d21acd016259f271c3e70a1251e0abd90be5a8d4f60ad7509a5d24ef5068f",
+        "edx_drf_extensions.egg-info/top_level.txt": "4d9a2bd234ad73b2970b372a7ea9906cbc87aa7dce1ecfb2720f165563dc5379",
+        "edx_rest_framework_extensions/__init__.py": "aa638570473e994665ec95662615d548f42ef8ad92c6fedeae128a4290a40862",
+        "edx_rest_framework_extensions/auth/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "edx_rest_framework_extensions/auth/bearer/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "edx_rest_framework_extensions/auth/bearer/authentication.py": "cf20be4f02b66efc9482239d26e522b8f2626495cf32cc1c668775a5262707ba",
+        "edx_rest_framework_extensions/auth/bearer/tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "edx_rest_framework_extensions/auth/bearer/tests/test_authentication.py": "e01f9db3bdcc9bdd68446b0bb36eed8c8ecfc745f7600508967d58739fbb3360",
+        "edx_rest_framework_extensions/auth/jwt/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "edx_rest_framework_extensions/auth/jwt/authentication.py": "2ba34f6dca5978608e51eaa723708ed1bc7bb14aa2bcfbb10bc7171b3da43714",
+        "edx_rest_framework_extensions/auth/jwt/constants.py": "1af70e7b49b64a21b9796dd390dfab9a7573f44c085680600026b099deea19cd",
+        "edx_rest_framework_extensions/auth/jwt/cookies.py": "22ec0eb561c8da065e4dcac39dd163efd4be0462d0c2400e3c4d612c4c037e79",
+        "edx_rest_framework_extensions/auth/jwt/decoder.py": "4e133620d60b7bc5212f157d92696b65aca60f342f9235ccd6b6431afcde3572",
+        "edx_rest_framework_extensions/auth/jwt/middleware.py": "78173bf1fe67d8268896ff743f33e9cac76af60921a394a85f5f5dd7067021a8",
+        "edx_rest_framework_extensions/auth/jwt/tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "edx_rest_framework_extensions/auth/jwt/tests/test_authentication.py": "03e6a4c4ef9483009f85ca3ec882c31b6b3225e497a855e0e54e3e89ac19cabe",
+        "edx_rest_framework_extensions/auth/jwt/tests/test_cookies.py": "23af31d83de121a506f73e67d42a99368f021452e77a20e7e9fe175df5f8e59e",
+        "edx_rest_framework_extensions/auth/jwt/tests/test_decoder.py": "3682ec4f61208e98eddf039298f01ee3283fc24512a3b2250f03da50c6b7038b",
+        "edx_rest_framework_extensions/auth/jwt/tests/test_middleware.py": "273e37efb3ba9153a360d404f114078c8c5d4ac4ab6c569bf368e6d2f9707190",
+        "edx_rest_framework_extensions/auth/jwt/tests/utils.py": "89186e2a2e802855aa15ab89a5e8176bc863c49d1739424a0531c55ba29e8747",
+        "edx_rest_framework_extensions/auth/session/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "edx_rest_framework_extensions/auth/session/authentication.py": "9b501978b313075307e931eabeaa1fcf8ddc5047da7c3e7470f2cdd422141e7d",
+        "edx_rest_framework_extensions/auth/session/tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "edx_rest_framework_extensions/auth/session/tests/test_authentication.py": "99f35cf00b98fa9e11d2103140b83127f3997508aeb0177810dc8ab7b8a793a7",
+        "edx_rest_framework_extensions/config.py": "8f07c6ed5a17340dad348728e831e31a377aa716ee120fe6035898aa58b46915",
+        "edx_rest_framework_extensions/exceptions.py": "25e96b12fa9cd976283204c6500ddd0fcbb7c6d8fe58faa5f64b7dcb4ae17f7c",
+        "edx_rest_framework_extensions/middleware.py": "654ad10cd2f715d2755c438c960243acd57f98de1aad26bb7b655efe9f8cc206",
+        "edx_rest_framework_extensions/paginators.py": "18937145d78c993f77e962466e2faf3a39b29c3cfda38e2368916a00fc940126",
+        "edx_rest_framework_extensions/permissions.py": "3a0bb7a676bff934c29c9d82ec59d39a36f19c7b580629c77a57810893347716",
+        "edx_rest_framework_extensions/settings.py": "9ee5fd76baeb218999cd94baf62d538aba3526eac228a864b02f7d7a61cb3ea2",
+        "edx_rest_framework_extensions/tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "edx_rest_framework_extensions/tests/factories.py": "6308ec4d78795c29be7a47a87bdebb72ec67b8c7075bdfee0e423028e917a9ea",
+        "edx_rest_framework_extensions/tests/test_middleware.py": "e3aff8c9abd6c57d3d1b0ab1e60324d136faefbd88ae32a7ebb0f976c1fde43d",
+        "edx_rest_framework_extensions/tests/test_paginators.py": "a52ea5392aeb85f07e6a35de38beb61338ae3cec29fd7c611367d04106879a06",
+        "edx_rest_framework_extensions/tests/test_permissions.py": "8daefb85b81415323415341ff04e58e6c8d8cc9000275dfa7dd77e1334deb373",
+        "edx_rest_framework_extensions/tests/test_settings.py": "a7b40268632a1073e04ce9f6dd4230847bf573e117c1ca940d68cf98f15be39f",
+        "edx_rest_framework_extensions/utils.py": "3ace4f39dde20201b04fd6a141f9dca5aab180fbccd2afdcc3f474b0ae3932ec",
+        "requirements/base.in": "31b05e7812aadb6d725f5dd94acdb5d9e238f5843efebc72e3dd795906de6ddd",
+        "requirements/constraints.txt": "aebeda4ce3529b2f8114c93e52a41a8dcb4ef1414e6dcf6a6474cc4118223d15",
+        "requirements/docs.in": "f544c8cbcca1772dabe238bcdc20d028c61ca15c5db46b516fd3408a03ca1d2f",
+        "requirements/test.in": "79d5dc73cca0ddf9e15925acabc77aed6bdab4577c27e60bf2ba1afca9b6ae9f",
+        "setup.cfg": "f2977380a3ccd042321b5825ea521dc1c0f6aab8da8c2a2bef81aedd4a2ac982",
+        "setup.py": "46956eb55ef798b7158d761aeb3b08256b5b98f1960f8c4e5c4ae33233732877"
+      },
+      "module": "edx_rest_framework_extensions",
+      "name": "edx-drf-extensions",
+      "patch": "edx-drf-extensions-10.6.0-py313-compat.patch",
+      "patch_sha256": "7ff937eef1281bca01f638ea5f24532817f49dbd143478e29bef9ab3cee7f8f4",
+      "sha256": "6c06d0bd92cd7105386ae2ce93b7a3263a87643b70450cb706667cc62bafdf9c",
+      "source_roots": [
+        {
+          "installed": "edx_rest_framework_extensions",
+          "source": "edx_rest_framework_extensions"
+        },
+        {
+          "installed": "csrf",
+          "source": "csrf"
+        }
+      ],
+      "upstream_sha256": "c633be6aeb615836a5cbb118b52311d87905942273fdb470bfcc1c95fd5f84b7",
+      "upstream_url": "https://files.pythonhosted.org/packages/07/b4/24ae933674841abb97332b134ff4d2b6ea099716d5f61935fd2128cb0d38/edx_drf_extensions-10.6.0.tar.gz",
+      "upstream_version": "10.6.0",
+      "version": "10.6.0+hawthorn.1",
+      "version_edits": [
+        {
+          "file": "edx_rest_framework_extensions/__init__.py",
+          "new": "__version__ = '10.6.0+hawthorn.1'",
+          "old": "__version__ = '10.6.0'"
+        }
+      ]
+    }
+  ]
+}

@@ -76,11 +76,11 @@ class RefreshCourseMetadataIngestContractTests(TransactionTestCase):
 
     @responses.activate
     def test_ingest_accepts_an_opaque_bearer_token(self):
-        """`TOKEN_TYPE='Bearer'` yields a token with no claims; decoding it as a JWT is a hard error.
+        """`TOKEN_TYPE='Bearer'` yields a token with no claims, so it must not be decoded as one.
 
-        The py3.13 LMS resolves a Bearer token by its stored checksum, so the client-credentials
-        grant returns an opaque string rather than a JWT. Reading `preferred_username` out of it
-        raised `DecodeError: Not enough segments` before any course was fetched.
+        The LMS returns an opaque string rather than a JWT when asked for a Bearer token.
+        Reading `preferred_username` out of it would raise `DecodeError: Not enough segments`
+        before any course was fetched, which is why the claim is read only for `JWT`.
         """
         bodies = mock_data.COURSES_API_BODIES
         url = self.courses_api_url + 'courses/'
@@ -99,3 +99,34 @@ class RefreshCourseMetadataIngestContractTests(TransactionTestCase):
 
         self.assertEqual(Course.objects.count(), len(bodies))
         self.assertEqual(CourseRun.objects.count(), len(bodies))
+
+    def _requested_token_type(self, courses_api_cfg):
+        """Run the command far enough to record which token type it asks the LMS for."""
+        bodies = mock_data.COURSES_API_BODIES
+        url = self.courses_api_url + 'courses/'
+        responses.add_callback(
+            responses.GET,
+            url,
+            callback=mock_api_callback(url, bodies, pagination=True),
+            content_type=JSON
+        )
+        with override_settings(COURSES_API=courses_api_cfg), \
+                mock.patch('course_discovery.apps.course_metadata.management.commands.'
+                           'refresh_course_metadata.get_oauth_access_token',
+                           return_value=(ACCESS_TOKEN, None)) as acquire:
+            call_command('refresh_course_metadata')
+        return acquire.call_args.kwargs['token_type']
+
+    @responses.activate
+    def test_an_unset_token_type_asks_for_a_jwt(self):
+        """Production reads COURSES_API from discovery.auth.json, which has no TOKEN_TYPE key.
+
+        lt-master hardcodes `token_type = 'JWT'`, so the fallback has to keep asking for one;
+        defaulting to Bearer would move this environment onto a path production never takes.
+        """
+        self.assertEqual(self._requested_token_type(dict(self.courses_api_cfg)), 'JWT')
+
+    @responses.activate
+    def test_a_lower_case_token_type_still_asks_for_a_jwt(self):
+        """`token_type` is normalized, so a lower-case override cannot skip the username claim."""
+        self.assertEqual(self._requested_token_type(dict(self.courses_api_cfg, TOKEN_TYPE='jwt')), 'JWT')

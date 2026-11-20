@@ -1,4 +1,10 @@
 # course-discovery Python 3.13 production dependencies (phase 2, S2.1)
+#
+# NOT INSTALLED BY ANYTHING YET. The devstack replay installs local.txt, and no staging or
+# production deploy code reads this file. It is maintained so the production dependency set
+# stays resolvable and reviewable, but treat it as unverified until a deploy path installs it
+# and runs its tests. The matching lock is regenerated with:
+#     python ci/py313/regenerate-lock.py production
 -r base.in
 
 certifi==2026.4.22

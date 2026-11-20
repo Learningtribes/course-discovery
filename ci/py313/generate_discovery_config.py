@@ -46,7 +46,9 @@ import importlib
 import json
 import os
 from pathlib import Path
+import socket
 import sys
+from urllib.parse import urlsplit, urlunsplit
 
 import yaml
 
@@ -60,6 +62,34 @@ SUPPORTED_BACKENDS = (
 DEFAULT_MEMCACHE_PORT = '11211'
 # Set by `production.py` to build DATABASES; a YAML without it is useless.
 REQUIRED_KEYS = ('SECRET_KEY',)
+
+# `AUTHENTICATION_BACKENDS` names `auth_backends.backends.EdXOAuth2`. social-auth derives the
+# settings prefix from the backend's `name = 'edx-oauth2'`, so it reads `SOCIAL_AUTH_EDX_OAUTH2_*`.
+# The Ansible role that writes this YAML still emits the keys of the removed `EdXOpenIdConnect`
+# backend, which nothing reads now, so a corrected copy that keeps those names leaves browser
+# login unconfigured while looking perfectly healthy.
+OAUTH2_RENAMES = {
+    'SOCIAL_AUTH_EDX_OIDC_KEY': 'SOCIAL_AUTH_EDX_OAUTH2_KEY',
+    'SOCIAL_AUTH_EDX_OIDC_SECRET': 'SOCIAL_AUTH_EDX_OAUTH2_SECRET',
+    'SOCIAL_AUTH_EDX_OIDC_URL_ROOT': 'SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT',
+    # The backend prefers `PUBLIC_URL_ROOT` over `URL_ROOT` for the login redirect, and the
+    # removed backend had no such setting, so an Ansible file may carry either spelling.
+    'SOCIAL_AUTH_EDX_OIDC_PUBLIC_URL_ROOT': 'SOCIAL_AUTH_EDX_OAUTH2_PUBLIC_URL_ROOT',
+    # The backend reads `LOGOUT_REDIRECT_URL`; it has no `LOGOUT_URL` setting at all, so mapping
+    # onto `_OAUTH2_LOGOUT_URL` would write a key nothing reads.
+    'SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL': 'SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_REDIRECT_URL',
+}
+# Already spelled the way the backend reads it, so only the prefix changes. Kept out of
+# `OAUTH2_RENAMES` because the source name is not an `_OIDC_` key.
+OAUTH2_PUBLIC_URL_ROOT = 'SOCIAL_AUTH_EDX_OAUTH2_PUBLIC_URL_ROOT'
+# Dropped rather than renamed: it only fed the removed backend's ID-token decryption, and the
+# OAuth2 backend has no equivalent. Carrying it forward would suggest it still has an effect.
+OAUTH2_DROPPED = ('SOCIAL_AUTH_EDX_OIDC_ID_TOKEN_DECRYPTION_KEY',)
+# `EdXOAuth2.authorization_url()` returns `f'{url_root}/oauth2/authorize'`, so a URL_ROOT that
+# already ends in the OAuth2 mount point yields `/oauth2/oauth2/authorize`. The removed backend
+# took the opposite convention (`.../oauth`), which is why a carried-over value is not safe to
+# copy verbatim.
+OAUTH2_MOUNT = '/oauth2'
 
 
 def fail(message):
@@ -132,6 +162,123 @@ def apply_django52(config):
     return config
 
 
+def strip_oauth2_mount(url):
+    """Drop a trailing OAuth2 mount point, since the backend appends one itself.
+
+    Idempotent, and leaves any other path alone: `https://lms/oauth2` -> `https://lms`, while
+    `https://lms/some/prefix` is returned unchanged.
+
+    The suffix is matched against the **path only**, never the whole string: a deployment whose
+    LMS host is literally named `oauth` produces `https://oauth`, whose last six characters are
+    also `/oauth`, and cutting there left `https:/` -- a URL the backend cannot build anything
+    from. Parsing first keeps the netloc out of reach.
+    """
+    if not isinstance(url, str):
+        return url
+    parts = urlsplit(url)
+    path = parts.path.rstrip('/')
+    for suffix in (OAUTH2_MOUNT, '/oauth'):
+        if path.endswith(suffix):
+            path = path[:-len(suffix)]
+            break
+    else:
+        return url
+    if not path:
+        # A relative `URL_ROOT` (`/oauth2`) would otherwise become the empty string; an absolute
+        # one keeps its bare origin, which is what the backend wants.
+        path = '' if parts.netloc else '/'
+    return urlunsplit((parts.scheme, parts.netloc, path, parts.query, parts.fragment))
+
+
+def apply_oauth2_backend(config):
+    """Move the backend's credential keys onto the prefix `EdXOAuth2` actually reads.
+
+    Values are moved as-is except `URL_ROOT`, which is normalized: the backend appends
+    `/oauth2`, and the removed backend's convention was to include the mount point, so a
+    verbatim copy would produce `/oauth2/oauth2/authorize`. Nothing here reads, prints or
+    validates a secret. A key already spelled the new way wins, so re-running over a corrected
+    file is a no-op rather than a way to clobber a newer value with a stale one.
+    """
+    for old, new in OAUTH2_RENAMES.items():
+        if old not in config:
+            continue
+        if new not in config:
+            config[new] = config[old]
+        del config[old]
+    if OAUTH2_PUBLIC_URL_ROOT in config:
+        config[OAUTH2_PUBLIC_URL_ROOT] = strip_oauth2_mount(config[OAUTH2_PUBLIC_URL_ROOT])
+    if config.get('SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT'):
+        config['SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT'] = strip_oauth2_mount(
+            config['SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT'])
+    for dropped in OAUTH2_DROPPED:
+        config.pop(dropped, None)
+    return config
+
+
+def validate_oauth2(config):
+    """Report keys the backend ignores, and fail only on a configuration that cannot log in.
+
+    `apply_oauth2_backend` renames every key it knows about, so a key from `OAUTH2_RENAMES`
+    surviving to here is a bug in that function, while anything else starting with
+    `SOCIAL_AUTH_EDX_OIDC_` is a setting of the removed backend that has no OAuth2 equivalent.
+    The distinction matters because a leftover must not block a deployment: a harmless extra
+    key in an Ansible file would otherwise stop the generator and, with it, the config the
+    service needs to start at all. Unknown keys are reported and dropped; only a rename-table
+    key that somehow survived is fatal.
+    """
+    survived = sorted(key for key in config if key in OAUTH2_RENAMES)
+    if survived:
+        raise ValueError('apply_oauth2_backend did not rename: ' + ', '.join(survived))
+    ignored = sorted(key for key in config if key.startswith('SOCIAL_AUTH_EDX_OIDC_'))
+    if ignored:
+        print('note: dropping keys the EdXOAuth2 backend ignores: ' + ', '.join(ignored),
+              file=sys.stderr)
+        for key in ignored:
+            del config[key]
+    if config.get('SOCIAL_AUTH_EDX_OAUTH2_KEY') and not config.get('SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT'):
+        fail('SOCIAL_AUTH_EDX_OAUTH2_KEY is set but SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT is not; '
+             'browser login would have no LMS to redirect to')
+    return config
+
+
+def _usable_host(location):
+    """The host part of a cache ``LOCATION``, with any brackets and port removed.
+
+    Brackets have to come off before the port is looked for: `[::1]` contains colons of its own,
+    so splitting on ':' first treats the address as `host:port` and returns `':'`.
+    """
+    if location.startswith('['):
+        end = location.find(']')
+        return location[1:end] if end != -1 else location.strip('[]')
+    return location.rsplit(':', 1)[0] if ':' in location else location
+
+
+def unresolvable_locations(config):
+    """Cache ``LOCATION`` hosts this host cannot resolve, as ``(alias, host)`` pairs.
+
+    Reported, never fatal. The address belongs to the deployment and a generator host can
+    legitimately resolve differently from the service host, so guessing a replacement would
+    be worse than saying nothing. But saying nothing has a cost: ``LOCATION: ['memcache']``
+    copied out of a devstack is unresolvable anywhere else, and the only symptom is a 500
+    from whichever request first touches the cache -- with nothing pointing back at this
+    file. A unix-socket location (``/path``) is not a host and is skipped.
+    """
+    problems = []
+    for alias, entry in sorted((config.get('CACHES') or {}).items()):
+        if not isinstance(entry, dict):
+            continue
+        locations = entry.get('LOCATION')
+        for location in [locations] if isinstance(locations, str) else (locations or []):
+            if not isinstance(location, str) or location.startswith('/'):
+                continue
+            host = _usable_host(location)
+            try:
+                socket.getaddrinfo(host, None)
+            except Exception:  # pylint: disable=broad-except
+                problems.append((alias, host))
+    return problems
+
+
 def validate(config, check_imports=True):
     """Refuse to write a file that cannot start: a wrong backend only surfaces at django.setup()."""
     missing = [key for key in REQUIRED_KEYS if not config.get(key)]
@@ -155,6 +302,15 @@ def validate(config, check_imports=True):
             fail('CACHES.%s backend %s is not importable here: %s\n'
                  'Run this script with the service venv (it owns Django), or pass --skip-import-check'
                  % (alias, backend, exc))
+    if check_imports:
+        # Only on the operator path: `--skip-import-check` says this environment cannot answer
+        # runtime questions at all, and a name lookup here would just be noise (or a DNS stall
+        # in CI) rather than a fact about the host that will run the service.
+        for alias, host in unresolvable_locations(config):
+            print('warning: CACHES.%s LOCATION host %r does not resolve here; the first cache '
+                  'access will fail and the request that touched it returns 500. Point it at a '
+                  'reachable memcached, or set DISCOVERY_MEMCACHE to override the address.'
+                  % (alias, host), file=sys.stderr)
     return config
 
 
@@ -199,6 +355,7 @@ def main(argv=None):
             fail('--out must not be the source file; the corrected copy replaces it via DISCOVERY_CFG')
 
     config = validate(apply_django52(config), check_imports=not args.skip_import_check)
+    config = validate_oauth2(apply_oauth2_backend(config))
 
     if args.dry_run:
         print('Would write %s with keys: %s' % (args.out, ', '.join(sorted(config))))

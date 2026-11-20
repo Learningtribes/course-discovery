@@ -7,13 +7,28 @@ MySQL 8.4 (container `discovery-py3-mysql`), memcached (`discovery-py3-memcached
 a symmetric JWT key for local interop, and permissive hosts.
 
 Nothing here is production config. Secrets come from the environment (set by the
-runner), never from this file, so it can be committed.
+runner), never from this file, so it can be committed -- with one exception: the
+JWT fallback below has a published default and is therefore safe only locally. The
+`DISCOVERY_LOCAL_RUN` guard is what keeps that exception from travelling.
 """
 import os
 
 from django.core.exceptions import ImproperlyConfigured
 
 from course_discovery.settings.base import *  # pylint: disable=wildcard-import,unused-wildcard-import,wrong-import-position
+
+# Everything below is acceptable for the isolated local replay and wrong everywhere else: this
+# module turns on DEBUG tracebacks, accepts any Host header, and can fall back to a JWT signing
+# secret that is published in this repository (so anyone who can read the repository could forge
+# an administrator token). A flag rather than a comment, because a comment cannot refuse to
+# start: without it the module is only ever loaded by something that already said "this is local".
+if os.environ.get('DISCOVERY_LOCAL_RUN') != '1':
+    raise ImproperlyConfigured(
+        'course_discovery.settings.py313 is the isolated local replay settings module: it enables '
+        'DEBUG, sets ALLOWED_HOSTS to ["*"] and can fall back to a repository-published JWT '
+        'secret. Set DISCOVERY_LOCAL_RUN=1 to confirm this is a local run, or use '
+        'course_discovery.settings.production for anything shared.'
+    )
 
 DEBUG = True
 
@@ -45,6 +60,10 @@ CACHES = {
 # When DISCOVERY_LMS_JWT_SECRET is set, discovery verifies platform-signed JWTs
 # (HS256, issuer http://<lms>/oauth2) instead of its own self-signed tokens. The
 # shared secret is the platform's BRINGUP_STARTUP_SECRET_KEY, injected by the runner.
+# The `else` branch below exists for a standalone local run only. Its default is published in
+# this repository, so it is a forgeable key: the DISCOVERY_LOCAL_RUN guard above is the only
+# thing that keeps it from being loaded where that would matter. Nothing sets
+# DISCOVERY_JWT_SECRET_KEY today, so the default is what a standalone run actually gets.
 _lms_jwt_secret = os.environ.get('DISCOVERY_LMS_JWT_SECRET', '')
 if _lms_jwt_secret:
     JWT_AUTH['JWT_ISSUERS'] = [{
@@ -79,12 +98,17 @@ COURSES_API = {
     'OIDC_KEY': _required('DISCOVERY_OIDC_KEY'),
     'OIDC_SECRET': _required('DISCOVERY_OIDC_SECRET'),
     'IS_SECURE': False,
-    # The platform's `OAuth2Authentication` resolves a Bearer token by
-    # sha256(token) against `oauth2_provider.AccessToken.token_checksum`, so the opaque
-    # token a `token_type=Bearer` request returns authenticates, while the JWT a
-    # `token_type=JWT` request returns is rejected with `token_nonexistent`. Verified
-    # against the py3.13 LMS: Bearer -> 200 with the course list, JWT -> 401.
-    'TOKEN_TYPE': os.environ.get('DISCOVERY_COURSES_API_TOKEN_TYPE', 'Bearer'),
+    # Which credential discovery asks the LMS for. Both work; each has to be sent back under
+    # its own header prefix. `OAuth2Authentication` resolves a Bearer token by sha256(token)
+    # against `oauth2_provider.AccessToken.token_checksum`, and a JWT by its signature, so a
+    # JWT sent as `Bearer` answers `401 token_nonexistent` and a Bearer sent as `JWT` answers
+    # `401 Invalid token.` Verified against the py3.13 LMS: 4/4 combinations pair up as above.
+    #
+    # JWT is the default because that is what production runs. Production reads `COURSES_API`
+    # from discovery.auth.json, which has no TOKEN_TYPE key, so `refresh_course_metadata`
+    # falls back to JWT -- the same value lt-master hardcodes. Defaulting to Bearer here made
+    # the local environment exercise the one path production never takes.
+    'TOKEN_TYPE': os.environ.get('DISCOVERY_COURSES_API_TOKEN_TYPE', 'JWT'),
 }
 
 # Avoid the deleted haystack signal processor still referenced by shared/test.py.
