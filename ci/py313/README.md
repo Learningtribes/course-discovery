@@ -304,7 +304,7 @@ python manage.py migrate --noinput
 `course_discovery/default.db`). Running `manage.py migrate` without sourcing the env file
 creates tables in a file, reports no error, and leaves MySQL empty.
 
-The generator itself is covered by `ci/py313/test_generate_discovery_config.py` (14 tests):
-every alias is rewritten, the source's unrelated values survive, a `MemcachedCache` or a
-missing `CACHES` block is rejected, the file lands at mode 0640, and the source path can never
-be overwritten in place.
+The generator itself is covered by `ci/py313/test_generate_discovery_config.py` (34 tests):
+every alias is rewritten, both URL roots lose a trailing OAuth2 mount, the source's unrelated
+values survive, a `MemcachedCache` or a missing `CACHES` block is rejected, the file lands at
+mode 0640, and the source path can never be overwritten in place.
