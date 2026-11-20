@@ -357,6 +357,26 @@ def test_a_resolvable_cache_host_says_nothing(gen, monkeypatch, capsys):
     assert 'warning' not in capsys.readouterr().err
 
 
+def test_an_ipv6_cache_location_keeps_its_address_intact(gen, monkeypatch):
+    """`[::1]` carries colons of its own, so the port split must not run before the brackets.
+
+    Splitting first turned `[::1]` into the host `':'`, which never resolves -- reporting a
+    working loopback cache as unreachable is worse than saying nothing.
+    """
+    tried = []
+
+    def record(host, *args, **kwargs):
+        tried.append(host)
+        return [(10, 1, 6, '', (host, 0))]
+
+    monkeypatch.setattr(gen.socket, 'getaddrinfo', record)
+    config = {'CACHES': {'default': {'BACKEND': gen.DEFAULT_CACHE_BACKEND,
+                                     'LOCATION': ['[::1]', '[::1]:11211']}}}
+
+    assert gen.unresolvable_locations(config) == []
+    assert tried == ['::1', '::1']
+
+
 def test_a_unix_socket_cache_location_is_not_a_host(gen, monkeypatch):
     """PyMemcacheCache accepts a socket path; resolving it as a hostname would be nonsense."""
     def explode(*args, **kwargs):

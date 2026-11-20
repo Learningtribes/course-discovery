@@ -241,6 +241,18 @@ def validate_oauth2(config):
     return config
 
 
+def _usable_host(location):
+    """The host part of a cache ``LOCATION``, with any brackets and port removed.
+
+    Brackets have to come off before the port is looked for: `[::1]` contains colons of its own,
+    so splitting on ':' first treats the address as `host:port` and returns `':'`.
+    """
+    if location.startswith('['):
+        end = location.find(']')
+        return location[1:end] if end != -1 else location.strip('[]')
+    return location.rsplit(':', 1)[0] if ':' in location else location
+
+
 def unresolvable_locations(config):
     """Cache ``LOCATION`` hosts this host cannot resolve, as ``(alias, host)`` pairs.
 
@@ -259,7 +271,7 @@ def unresolvable_locations(config):
         for location in [locations] if isinstance(locations, str) else (locations or []):
             if not isinstance(location, str) or location.startswith('/'):
                 continue
-            host = (location.rsplit(':', 1)[0] if ':' in location else location).strip('[]')
+            host = _usable_host(location)
             try:
                 socket.getaddrinfo(host, None)
             except Exception:  # pylint: disable=broad-except
