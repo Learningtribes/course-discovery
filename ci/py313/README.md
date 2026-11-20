@@ -241,10 +241,15 @@ actually reads (`$DISCOVERY_CFG`) carries the names the backend looks for:
 | `SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL` | `SOCIAL_AUTH_EDX_OAUTH2_LOGOUT_URL` |
 | `SOCIAL_AUTH_EDX_OIDC_ID_TOKEN_DECRYPTION_KEY` | dropped — the OAuth2 backend has no equivalent |
 
-The generator refuses to write a file that still carries a `SOCIAL_AUTH_EDX_OIDC_*` key, or an
-`_OAUTH2_KEY` with no `_URL_ROOT` to redirect to. Values are moved as-is and a key already under
-the new name wins, so re-running over an already-corrected file is a no-op rather than a way to
-restore a stale value.
+The generator refuses to write a file whose `_OAUTH2_KEY` has no `_URL_ROOT` to redirect to.
+Values are moved as-is and a key already under the new name wins, so re-running over an
+already-corrected file is a no-op rather than a way to restore a stale value.
+
+A `SOCIAL_AUTH_EDX_OIDC_*` key the table above does not cover (an old-backend setting with no
+OAuth2 equivalent) is **reported on stderr and dropped**, not treated as an error: an extra
+harmless key in an Ansible file must not stop the generator, because the file it writes is what
+lets the service start at all. A key that the rename table *does* cover can only survive there
+through a bug in `apply_oauth2_backend`, and that is a hard failure.
 
 `DISCOVERY_SOCIAL_AUTH_EDX_OAUTH2_*` are also present in
 `hawthorn_inventory/group_vars/tenants/discovery-vars.yml`, next to the old names the role still

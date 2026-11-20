@@ -166,10 +166,25 @@ def apply_oauth2_backend(config):
 
 
 def validate_oauth2(config):
-    """A leftover `SOCIAL_AUTH_EDX_OIDC_*` key would be silently ignored, so refuse to write one."""
-    leftover = sorted(key for key in config if key.startswith('SOCIAL_AUTH_EDX_OIDC_'))
-    if leftover:
-        fail('these keys are ignored by the EdXOAuth2 backend: ' + ', '.join(leftover))
+    """Report keys the backend ignores, and fail only on a configuration that cannot log in.
+
+    `apply_oauth2_backend` renames every key it knows about, so a key from `OAUTH2_RENAMES`
+    surviving to here is a bug in that function, while anything else starting with
+    `SOCIAL_AUTH_EDX_OIDC_` is a setting of the removed backend that has no OAuth2 equivalent.
+    The distinction matters because a leftover must not block a deployment: a harmless extra
+    key in an Ansible file would otherwise stop the generator and, with it, the config the
+    service needs to start at all. Unknown keys are reported and dropped; only a rename-table
+    key that somehow survived is fatal.
+    """
+    survived = sorted(key for key in config if key in OAUTH2_RENAMES)
+    if survived:
+        raise ValueError('apply_oauth2_backend did not rename: ' + ', '.join(survived))
+    ignored = sorted(key for key in config if key.startswith('SOCIAL_AUTH_EDX_OIDC_'))
+    if ignored:
+        print('note: dropping keys the EdXOAuth2 backend ignores: ' + ', '.join(ignored),
+              file=sys.stderr)
+        for key in ignored:
+            del config[key]
     if config.get('SOCIAL_AUTH_EDX_OAUTH2_KEY') and not config.get('SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT'):
         fail('SOCIAL_AUTH_EDX_OAUTH2_KEY is set but SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT is not; '
              'browser login would have no LMS to redirect to')

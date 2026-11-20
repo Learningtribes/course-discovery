@@ -209,9 +209,22 @@ def test_a_file_with_no_social_auth_keys_is_untouched(gen):
     assert result == {'SECRET_KEY': 'secret'}
 
 
-def test_validate_rejects_a_leftover_oidc_key(gen):
-    """It would be ignored silently, so writing it out would look like a fix that is not one."""
-    with pytest.raises(SystemExit, match='ignored by the EdXOAuth2 backend'):
+def test_an_unknown_oidc_key_is_dropped_with_a_note_not_a_failure(gen, capsys):
+    """A harmless extra Ansible key must not stop the generator: the service needs this file."""
+    result = gen.validate_oauth2({
+        'SOCIAL_AUTH_EDX_OAUTH2_KEY': 'k',
+        'SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT': 'https://lms',
+        'SOCIAL_AUTH_EDX_OIDC_ISSUER': 'whatever',
+    })
+
+    assert 'SOCIAL_AUTH_EDX_OIDC_ISSUER' not in result
+    assert 'SOCIAL_AUTH_EDX_OAUTH2_KEY' in result
+    assert 'SOCIAL_AUTH_EDX_OIDC_ISSUER' in capsys.readouterr().err
+
+
+def test_a_key_the_rename_missed_is_still_a_hard_failure(gen):
+    """That would be a bug in `apply_oauth2_backend`, not something a deployment can cause."""
+    with pytest.raises(ValueError, match='did not rename'):
         gen.validate_oauth2({'SOCIAL_AUTH_EDX_OIDC_KEY': 'k'})
 
 
