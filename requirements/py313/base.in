@@ -48,7 +48,13 @@ edx-auth-backends==5.1.1
 edx-ccx-keys==2.0.2
 edx-django-release-util==1.5.0
 edx-django-sites-extensions==6.0.0
-edx-drf-extensions @ file:///workspace/ci/py313/companions/artifacts/edx_drf_extensions-10.6.0+hawthorn.1.tar.gz
+# A patched sdist, not a PyPI release. `@COMPANIONS_DIR@` stands in for the directory the
+# archive is read from, because no single absolute path is valid in every environment: the
+# devstack replay mounts this repository at /workspace, a deploy checkout lives elsewhere.
+# `ci/py313/materialize-lock.py` replaces the placeholder with a concrete directory and checks
+# the archive against `ci/py313/companions/manifest.json` before writing a lock out, so an
+# installer never points at bytes nobody reviewed. Compiling this file keeps the placeholder.
+edx-drf-extensions @ file://@COMPANIONS_DIR@/edx_drf_extensions-10.6.0+hawthorn.1.tar.gz
 edx-opaque-keys==4.0.0
 edx-rest-api-client==7.0.0
 html2text==2025.4.15

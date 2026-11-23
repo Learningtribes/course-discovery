@@ -114,10 +114,12 @@ class Command(BaseCommand):
                 for signal in (post_save, post_delete):
                     signal.disconnect(receiver=api_change_receiver, sender=model)
 
-            # The LMS resolves a Bearer token by its stored checksum, so an opaque token works
-            # where a JWT does not (see local `COURSES_API['TOKEN_TYPE']`). Production keeps JWT.
+            # `COURSES_API['TOKEN_TYPE']` selects the credential; the matching header prefix is
+            # applied by the data loader. Production keeps the JWT default (its auth.json carries
+            # no TOKEN_TYPE key), which is also what lt-master hardcodes. Normalized to upper case
+            # so a lower-case override cannot silently skip the username claim below.
             courses_api_cfg = getattr(settings, 'COURSES_API', None)
-            token_type = (courses_api_cfg or {}).get('TOKEN_TYPE', 'JWT')
+            token_type = ((courses_api_cfg or {}).get('TOKEN_TYPE') or 'JWT').upper()
             access_token = None
             courses_api_url = None
             if not courses_api_cfg:
@@ -157,9 +159,10 @@ class Command(BaseCommand):
 
             logger.info('*** Apply course API URL => {} '.format(courses_api_url))
 
-            # An opaque token carries no claims, so the username cannot be read from it. The LMS
-            # authenticates the Application owner from the token itself and returns the same
-            # courses either way, verified against this run's API.
+            # An opaque token carries no claims, so the username can only come out of a JWT. The
+            # LMS authenticates the Application owner either way and returns the same courses,
+            # measured against this run's API; what differs is the view the query asks for, since
+            # lt-master always sends `username=<preferred_username>`.
             username = (jwt.decode(access_token, options={'verify_signature': False})['preferred_username']
                         if token_type == 'JWT' else None)
             kwargs = {'username': username} if username else {}
